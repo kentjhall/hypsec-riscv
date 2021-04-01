@@ -865,9 +865,9 @@ static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
 	int ret;
-/* #ifndef CONFIG_VERIFIED_KVM */
+#ifndef CONFIG_VERIFIED_KVM
 	struct kvm_cpu_trap trap;
-/* #endif */
+#endif
 	struct kvm_run *run = vcpu->run;
 
 	/* Mark this VCPU ran at least once */
@@ -967,19 +967,19 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 * get an interrupt between __kvm_riscv_switch_to() and
 		 * local_irq_enable() which can potentially change CSRs.
 		 */
-/* #ifndef CONFIG_VERIFIED_KVM */
+#ifndef CONFIG_VERIFIED_KVM
 		trap.sepc = vcpu->arch.guest_context.sepc;
 		trap.scause = csr_read(CSR_SCAUSE);
 		trap.stval = csr_read(CSR_STVAL);
 		trap.htval = csr_read(CSR_HTVAL);
 		trap.htinst = csr_read(CSR_HTINST);
-/* #else */
-/* 		vcpu->arch.guest_trap.sepc = vcpu->arch.guest_context.sepc; */
-/* 		vcpu->arch.guest_trap.scause = csr_read(CSR_SCAUSE); */
-/* 		vcpu->arch.guest_trap.stval = csr_read(CSR_STVAL); */
-/* 		vcpu->arch.guest_trap.htval = csr_read(CSR_HTVAL); */
-/* 		vcpu->arch.guest_trap.htinst = csr_read(CSR_HTINST); */
-/* #endif */
+#else
+		vcpu->arch.guest_trap.sepc = vcpu->arch.guest_context.sepc;
+		vcpu->arch.guest_trap.scause = csr_read(CSR_SCAUSE);
+		vcpu->arch.guest_trap.stval = csr_read(CSR_STVAL);
+		vcpu->arch.guest_trap.htval = csr_read(CSR_HTVAL);
+		vcpu->arch.guest_trap.htinst = csr_read(CSR_HTINST);
+#endif
 
 		/* Syncup interrupts state with HW */
 		kvm_riscv_vcpu_sync_interrupts(vcpu);
@@ -1009,11 +1009,11 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 		vcpu->arch.srcu_idx = srcu_read_lock(&vcpu->kvm->srcu);
 
-/* #ifndef CONFIG_VERIFIED_KVM */
+#ifndef CONFIG_VERIFIED_KVM
 		ret = kvm_riscv_vcpu_exit(vcpu, run, &trap);
-/* #else */
-/* 		ret = kvm_riscv_vcpu_exit(vcpu, run, &vcpu->arch.guest_trap); */
-/* #endif */
+#else
+		ret = kvm_riscv_vcpu_exit(vcpu, run, &vcpu->arch.guest_trap);
+#endif
 	}
 
 	kvm_sigset_deactivate(vcpu);

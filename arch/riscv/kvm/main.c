@@ -28,19 +28,19 @@ int kvm_arch_check_processor_compat(void *opaque)
 	return 0;
 }
 
-/* #ifdef CONFIG_VERIFIED_KVM */
-/* static void install_hs_runtime(void *discard) */
-/* { */
-/* 	hvc_enable_s2_trans(); */
-/* } */
-/* #endif */
+#ifdef CONFIG_VERIFIED_KVM
+static void install_hs_runtime(void *discard)
+{
+	/* hvc_enable_s2_trans(); */
+}
+#endif
 
 int kvm_arch_hardware_setup(void *opaque)
 {
-/* #ifdef CONFIG_VERIFIED_KVM */
-/* 	on_each_cpu(install_hs_runtime, NULL, 1); */
-/* 	printk("HypSec HS runtime is installed\n"); */
-/* #endif */
+#ifdef CONFIG_VERIFIED_KVM
+	on_each_cpu(install_hs_runtime, NULL, 1);
+	printk("HypSec HS runtime is installed\n");
+#endif
 	return 0;
 }
 
