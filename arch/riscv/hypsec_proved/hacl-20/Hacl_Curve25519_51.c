@@ -732,12 +732,12 @@ static void montgomery_ladder(uint64_t *out, uint8_t *key, uint64_t *init1)
   for (_i = 0U; _i < (uint32_t)10U; ++_i)
     tmp2[_i] = FStar_UInt128_uint64_to_uint128((uint64_t)0U);
   uint64_t p01_tmp1_swap[41U];
-  el2_memset(p01_tmp1_swap, 0U, sizeof(uint64_t) * 41U);
+  hs_memset(p01_tmp1_swap, 0U, sizeof(uint64_t) * 41U);
   uint64_t *p0 = p01_tmp1_swap;
   uint64_t *p01 = p01_tmp1_swap;
   uint64_t *p03 = p01;
   uint64_t *p11 = p01 + (uint32_t)10U;
-  el2_memcpy(p11, init1, (uint32_t)10U * sizeof (init1[0U]));
+  hs_memcpy(p11, init1, (uint32_t)10U * sizeof (init1[0U]));
   uint64_t *x0 = p03;
   uint64_t *z0 = p03 + (uint32_t)5U;
   x0[0U] = (uint64_t)1U;
@@ -782,7 +782,7 @@ static void montgomery_ladder(uint64_t *out, uint8_t *key, uint64_t *init1)
   point_double(nq10, tmp1, tmp2);
   point_double(nq10, tmp1, tmp2);
   point_double(nq10, tmp1, tmp2);
-  el2_memcpy(out, p0, (uint32_t)10U * sizeof (p0[0U]));
+  hs_memcpy(out, p0, (uint32_t)10U * sizeof (p0[0U]));
 }
 
 void
@@ -804,7 +804,7 @@ Hacl_Curve25519_51_fsquare_times(
 void Hacl_Curve25519_51_finv(uint64_t *o, uint64_t *i, FStar_UInt128_uint128 *tmp)
 {
   uint64_t t1[20U];
-  el2_memset(t1, 0U, sizeof(uint64_t) * 20U);
+  hs_memset(t1, 0U, sizeof(uint64_t) * 20U);
   uint64_t *a = t1;
   uint64_t *b = t1 + (uint32_t)5U;
   uint64_t *c = t1 + (uint32_t)10U;
@@ -844,8 +844,8 @@ static void encode_point(uint8_t *o, uint64_t *i)
   uint64_t tmp[5U];
   uint64_t u64s[4U];
   FStar_UInt128_uint128 tmp_w[10U];
-  el2_memset(tmp, 0U, sizeof(uint64_t) * 5U);
-  el2_memset(u64s, 0U, sizeof(uint64_t) * 4U);
+  hs_memset(tmp, 0U, sizeof(uint64_t) * 5U);
+  hs_memset(u64s, 0U, sizeof(uint64_t) * 4U);
   for (_i = 0U; _i < (uint32_t)10U; ++_i)
     tmp_w[_i] = FStar_UInt128_uint64_to_uint128((uint64_t)0U);
   Hacl_Curve25519_51_finv(tmp, z, tmp_w);
@@ -862,8 +862,8 @@ void Hacl_Curve25519_51_scalarmult(uint8_t *out, uint8_t *priv, uint8_t *pub)
   uint32_t i;
   uint64_t init1[10U];
   uint64_t tmp[4U];
-  el2_memset(init1, 0U, sizeof(uint64_t) * 10U);
-  el2_memset(tmp, 0U, sizeof(uint64_t) * 4U);
+  hs_memset(init1, 0U, sizeof(uint64_t) * 10U);
+  hs_memset(tmp, 0U, sizeof(uint64_t) * 4U);
   for (i = (uint32_t)0U; i < (uint32_t)4U; i++)
   {
     uint64_t *os = tmp;
@@ -903,7 +903,7 @@ void Hacl_Curve25519_51_secret_to_public(uint8_t *pub, uint8_t *priv)
 {
   uint32_t i;
   uint8_t basepoint[32U];
-  el2_memset(basepoint, 0U, sizeof(uint8_t) * 32U);
+  hs_memset(basepoint, 0U, sizeof(uint8_t) * 32U);
   for (i = (uint32_t)0U; i < (uint32_t)32U; i++)
   {
     uint8_t *os = basepoint;
@@ -918,7 +918,7 @@ bool Hacl_Curve25519_51_ecdh(uint8_t *out, uint8_t *priv, uint8_t *pub)
 {
   uint32_t i;
   uint8_t zeros1[32U];
-  el2_memset(zeros1, 0U, sizeof(uint8_t) * 32U);
+  hs_memset(zeros1, 0U, sizeof(uint8_t) * 32U);
   Hacl_Curve25519_51_scalarmult(out, priv, pub);
   uint8_t res = (uint8_t)255U;
   for (i = (uint32_t)0U; i < (uint32_t)32U; i++)

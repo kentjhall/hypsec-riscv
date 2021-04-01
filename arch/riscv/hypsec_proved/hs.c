@@ -105,7 +105,7 @@ struct kvm* hypsec_vmid_to_kvm(u32 vmid)
 struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt(
 	u32 vmid, int vcpu_id)
 {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	struct shadow_vcpu_context *shadow_ctxt = NULL;
 	int index;
 
@@ -113,7 +113,7 @@ struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt(
 		__hyp_panic();
 
 	index = VCPU_IDX(vmid, vcpu_id);
-	shadow_ctxt = &el2_data->shadow_vcpu_ctxt[index];
+	shadow_ctxt = &hs_data->shadow_vcpu_ctxt[index];
 	if (!shadow_ctxt)
 		__hyp_panic();
 	else
@@ -156,19 +156,19 @@ static u64 stage2_get_exception_vector(u64 pstate)
 /* Currently, we do not handle lower level fault from 32bit host */
 void stage2_inject_el1_fault(unsigned long addr)
 {
-	u64 pstate = read_sysreg(spsr_el2);
-	u32 esr = 0, esr_el2;
+	u64 pstate = read_sysreg(spsr_hs);
+	u32 esr = 0, esr_hs;
 	bool is_iabt = false;
 
-	write_sysreg(read_sysreg(elr_el2), elr_el1);
-	write_sysreg(stage2_get_exception_vector(pstate), elr_el2);
+	write_sysreg(read_sysreg(elr_hs), elr_el1);
+	write_sysreg(stage2_get_exception_vector(pstate), elr_hs);
 
 	write_sysreg(addr, far_el1);
-	write_sysreg(PSTATE_FAULT_BITS_64, spsr_el2);
+	write_sysreg(PSTATE_FAULT_BITS_64, spsr_hs);
 	write_sysreg(pstate, spsr_el1);
 
-	esr_el2 = read_sysreg(esr_el2);
-	if ((esr_el2 << ESR_ELx_EC_SHIFT) == ESR_ELx_EC_IABT_LOW)
+	esr_hs = read_sysreg(esr_hs);
+	if ((esr_hs << ESR_ELx_EC_SHIFT) == ESR_ELx_EC_IABT_LOW)
 		is_iabt = true;
 
 	/* To get fancier debug info that includes LR from the guest Linux,
@@ -191,7 +191,7 @@ void reject_invalid_mem_access(phys_addr_t addr)
 {
 	print_string("\rinvalid access of guest memory\n\r");
 	print_string("\rpc: \n");
-	printhex_ul(read_sysreg(elr_el2));
+	printhex_ul(read_sysreg(elr_hs));
 	print_string("\rpa: \n");
 	printhex_ul(addr);
 	stage2_inject_el1_fault(addr);

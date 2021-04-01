@@ -149,9 +149,9 @@ SECTIONS
 	stage2_tmp_pgs_end = .;
 
 	. = ALIGN(PAGE_SIZE);
-	el2_data_start = .;
+	hs_data_start = .;
 	. += CORE_DATA_SIZE;
-	el2_data_end = .;
+	hs_data_end = .;
 
 	. = ALIGN(PAGE_SIZE);
 	shared_data_start = .;

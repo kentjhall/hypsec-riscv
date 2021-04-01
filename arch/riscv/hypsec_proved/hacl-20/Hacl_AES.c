@@ -1417,14 +1417,14 @@ static void cipher_loop(uint8_t *state, uint8_t *w, uint8_t *sbox, uint32_t roun
 void Crypto_Symmetric_AES_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uint8_t *sbox)
 {
   uint8_t state[16U];
-  el2_memset(state, 0U, sizeof(uint8_t) * 16U);
-  el2_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
+  hs_memset(state, 0U, sizeof(uint8_t) * 16U);
+  hs_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
   addRoundKey(state, w, (uint32_t)0U);
   cipher_loop(state, w, sbox, (uint32_t)1U);
   subBytes_sbox(state, sbox);
   shiftRows(state);
   addRoundKey(state, w, (uint32_t)14U);
-  el2_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
+  hs_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
 }
 
 static void rotWord(uint8_t *word)
@@ -1462,7 +1462,7 @@ static uint8_t rcon(uint32_t i, uint8_t tmp)
 
 static void keyExpansion_aux_0(uint8_t *w, uint8_t *temp, uint8_t *sbox, uint32_t j)
 {
-  el2_memcpy(temp, w + (uint32_t)4U * j - (uint32_t)4U, (uint32_t)4U * sizeof (w[0U]));
+  hs_memcpy(temp, w + (uint32_t)4U * j - (uint32_t)4U, (uint32_t)4U * sizeof (w[0U]));
   if (j % (uint32_t)8U == (uint32_t)0U)
   {
     rotWord(temp);
@@ -1508,8 +1508,8 @@ static void keyExpansion_aux(uint8_t *w, uint8_t *temp, uint8_t *sbox, uint32_t 
 void Crypto_Symmetric_AES_keyExpansion(uint8_t *key, uint8_t *w, uint8_t *sbox)
 {
   uint8_t temp[4U];
-  el2_memset(temp, 0U, sizeof(uint8_t) * 4U);
-  el2_memcpy(w, key, (uint32_t)32U * sizeof (key[0U]));
+  hs_memset(temp, 0U, sizeof(uint8_t) * 4U);
+  hs_memcpy(w, key, (uint32_t)32U * sizeof (key[0U]));
   keyExpansion_aux(w, temp, sbox, (uint32_t)8U);
 }
 
@@ -1600,14 +1600,14 @@ static void inv_cipher_loop(uint8_t *state, uint8_t *w, uint8_t *sbox, uint32_t 
 void Crypto_Symmetric_AES_inv_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uint8_t *sbox)
 {
   uint8_t state[16U];
-  el2_memset(state, 0U, sizeof(uint8_t) * 16U);
-  el2_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
+  hs_memset(state, 0U, sizeof(uint8_t) * 16U);
+  hs_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
   addRoundKey(state, w, (uint32_t)14U);
   inv_cipher_loop(state, w, sbox, (uint32_t)13U);
   invShiftRows(state);
   invSubBytes_sbox(state, sbox);
   addRoundKey(state, w, (uint32_t)0U);
-  el2_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
+  hs_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
 }
 
 static uint8_t multiply0(uint8_t a, uint8_t b)
@@ -3002,14 +3002,14 @@ static void cipher_loop0(uint8_t *state, uint8_t *w, uint8_t *sbox, uint32_t rou
 void Crypto_Symmetric_AES128_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uint8_t *sbox)
 {
   uint8_t state[16U];
-  el2_memset(state, 0U, sizeof(uint8_t) * 16U);
-  el2_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
+  hs_memset(state, 0U, sizeof(uint8_t) * 16U);
+  hs_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
   addRoundKey0(state, w, (uint32_t)0U);
   cipher_loop0(state, w, sbox, (uint32_t)1U);
   subBytes_sbox0(state, sbox);
   shiftRows0(state);
   addRoundKey0(state, w, (uint32_t)10U);
-  el2_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
+  hs_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
 }
 
 static void rotWord0(uint8_t *word)
@@ -3047,7 +3047,7 @@ static uint8_t rcon0(uint32_t i, uint8_t tmp)
 
 static void keyExpansion_aux_00(uint8_t *w, uint8_t *temp, uint8_t *sbox, uint32_t j)
 {
-  el2_memcpy(temp, w + (uint32_t)4U * j - (uint32_t)4U, (uint32_t)4U * sizeof (w[0U]));
+  hs_memcpy(temp, w + (uint32_t)4U * j - (uint32_t)4U, (uint32_t)4U * sizeof (w[0U]));
   if (j % (uint32_t)4U == (uint32_t)0U)
   {
     rotWord0(temp);
@@ -3093,8 +3093,8 @@ static void keyExpansion_aux0(uint8_t *w, uint8_t *temp, uint8_t *sbox, uint32_t
 void Crypto_Symmetric_AES128_keyExpansion(uint8_t *key, uint8_t *w, uint8_t *sbox)
 {
   uint8_t temp[4U];
-  el2_memset(temp, 0U, sizeof(uint8_t) * 4U);
-  el2_memcpy(w, key, (uint32_t)16U * sizeof (key[0U]));
+  hs_memset(temp, 0U, sizeof(uint8_t) * 4U);
+  hs_memcpy(w, key, (uint32_t)16U * sizeof (key[0U]));
   keyExpansion_aux0(w, temp, sbox, (uint32_t)4U);
 }
 
@@ -3190,14 +3190,14 @@ void
 Crypto_Symmetric_AES128_inv_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uint8_t *sbox)
 {
   uint8_t state[16U];
-  el2_memset(state, 0U, sizeof(uint8_t) * 16U);
-  el2_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
+  hs_memset(state, 0U, sizeof(uint8_t) * 16U);
+  hs_memcpy(state, input, (uint32_t)16U * sizeof (input[0U]));
   addRoundKey0(state, w, (uint32_t)10U);
   inv_cipher_loop0(state, w, sbox, (uint32_t)9U);
   invShiftRows0(state);
   invSubBytes_sbox0(state, sbox);
   addRoundKey0(state, w, (uint32_t)0U);
-  el2_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
+  hs_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
 }
 
 #define AES_BLOCKLEN 16

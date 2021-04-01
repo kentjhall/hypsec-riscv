@@ -8,8 +8,8 @@
 #include <asm/hypsec_virt.h>
 #include <asm/hypsec_pgtable.h>
 #include <asm/hypsec_host.h>
+#include <asm/hypsec_asm.h>
 #include <asm/spinlock_types.h>
-#include <asm/sbi.h>
 #include <linux/serial_reg.h>
 
 #include "hypsec.h"
@@ -19,19 +19,19 @@
  */
 
 /*
- * Since EL2 page tables were allocated in EL2, here we need to protect
+ * Since HS page tables were allocated in HS, here we need to protect
  * them by setting the ownership of the pages to HYPSEC_VMID. This allows
  * the core to reject any following accesses from the host.
  */
-static void protect_el2_mem(void)
+static void protect_hs_mem(void)
 {
 #if 0
 	unsigned long addr, end, index;
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 
 	/* Protect stage2 data and page pool. */
-	addr = el2_data->core_start;
-	end =  el2_data->core_end;
+	addr = hs_data->core_start;
+	end =  hs_data->core_end;
 	do {
 		index = get_s2_page_index(addr);
 		set_s2_page_vmid(index, COREVISOR);
@@ -40,37 +40,43 @@ static void protect_el2_mem(void)
 #endif
 }
 
-void hvc_enable_s2_trans(void)
+#include <linux/sched/task_stack.h>
+void show_regs(struct pt_regs *regs);
+void hvc_enable_s2_trans()
 {
-	struct el2_data *el2_data;
-	struct cpumask hmask;
+	struct hs_data *hs_data;
 	extern void (*__kvm_riscv_host_switch)(void);
 
 	acquire_lock_core();
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 
-	if (!el2_data->installed) {
-		protect_el2_mem();
-		el2_data->installed = true;
+	if (!hs_data->installed) {
+		protect_hs_mem();
+		hs_data->installed = true;
 	}
 
 #if 0
-	csr_write(CSR_HGATP, el2_data->host_hgatp);
+	csr_write(CSR_HGATP, hs_data->host_hgatp);
 #endif
 	csr_write(CSR_HGATP, HGATP_MODE_OFF); // TEMPORARY
 	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
 	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
 	csr_write(CSR_HCOUNTEREN, -1UL);
 	csr_write(CSR_HVIP, 0);
-	csr_write(CSR_HSTATUS, HSTATUS_SPVP | HSTATUS_SPV);
+	csr_write(CSR_HSTATUS, csr_read(CSR_HSTATUS) | HSTATUS_SPV);
+	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP);
 	csr_write(CSR_STVEC, __kvm_riscv_host_switch);
-	csr_write(CSR_SEPC, __builtin_return_address(0));
+	csr_write(CSR_SEPC, &&label);
 
-	riscv_cpuid_to_hartid_mask(cpu_online_mask, &hmask);
-	sbi_remote_hfence_gvma(cpumask_bits(&hmask), 0, 0);
+	__kvm_flush_vm_context();
 
 	release_lock_core();
+	pr_alert("HERE SRET, should go to: 0x%lx\n", (unsigned long)&&label);
+	show_regs(task_pt_regs(current));
 	__asm__("sret");
+label:
+	for(;;);
+	/* pr_alert("HERE SDONE lol\n"); */
 }
 
 void handle_host_hvc(struct s2_host_regs *hr)
@@ -103,7 +109,7 @@ void handle_host_hvc(struct s2_host_regs *hr)
 	}
 	else if (callno == HVC_CLEAR_VM_S2_RANGE)
 	{
-		el2_clear_vm_stage2_range((u32)arg1, arg2, arg3);
+		hs_clear_vm_stage2_range((u32)arg1, arg2, arg3);
 	}
 	else if (callno == HVC_SET_BOOT_INFO)
 	{
@@ -121,33 +127,33 @@ void handle_host_hvc(struct s2_host_regs *hr)
 	}
 	else if (callno == HVC_SMMU_FREE_PGD)
 	{
-		__el2_free_smmu_pgd((u32)arg1, (u32)arg2);
+		__hs_free_smmu_pgd((u32)arg1, (u32)arg2);
 	}
 	else if (callno == HVC_SMMU_ALLOC_PGD)
 	{
-		__el2_alloc_smmu_pgd((u32)arg1, (u32)arg2, (u32)arg3);
+		__hs_alloc_smmu_pgd((u32)arg1, (u32)arg2, (u32)arg3);
 	}
 	else if (callno == HVC_SMMU_LPAE_MAP)
 	{
-		__el2_arm_lpae_map(arg1, arg2, arg3, (u32)arg4, (u32)arg5);
+		__hs_arm_lpae_map(arg1, arg2, arg3, (u32)arg4, (u32)arg5);
 	}
 	else if (callno == HVC_SMMU_LPAE_IOVA_TO_PHYS)
 	{
-		ret64 = __el2_arm_lpae_iova_to_phys(arg1, (u32)arg2, (u32)arg3);
+		ret64 = __hs_arm_lpae_iova_to_phys(arg1, (u32)arg2, (u32)arg3);
 		set_host_regs(0, ret64);
 	}
 	else if (callno == HVC_SMMU_CLEAR)
 	{
-		__el2_arm_lpae_clear(arg1, (u32)arg2, (u32)arg3);
+		__hs_arm_lpae_clear(arg1, (u32)arg2, (u32)arg3);
 	}
 	else if (callno == HVC_ENCRYPT_BUF)
 	{
-		__el2_encrypt_buf((u32)arg1, arg2, arg3);
+		__hs_encrypt_buf((u32)arg1, arg2, arg3);
 	}
 	else if (callno == HVC_DECRYPT_BUF)
 	{
 		//TODO: FIXME
-		__el2_decrypt_buf((u32)arg1, (void*)arg2, (uint32_t)arg3);
+		__hs_decrypt_buf((u32)arg1, (void*)arg2, (uint32_t)arg3);
 	}
 	else if (callno == HVC_SAVE_CRYPT_VCPU)
 	{
@@ -169,7 +175,7 @@ void handle_host_hvc(struct s2_host_regs *hr)
 	}
 	else if (callno == HVC_PHYS_ADDR_IOREMAP)
 	{
-		el2_kvm_phys_addr_ioremap((u32)arg1, arg2, arg3, arg4);
+		hs_kvm_phys_addr_ioremap((u32)arg1, arg2, arg3, arg4);
 	}
 	else
 	{

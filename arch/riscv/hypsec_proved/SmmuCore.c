@@ -6,7 +6,7 @@ void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 	u64 offset, val, cbndx;
 	u32 ret, write_val;
 
-	offset = read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK;
+	offset = read_sysreg_hs(far) & ARM_SMMU_OFFSET_MASK;
 	write_val = 0U;
 
 	if (offset < ARM_SMMU_GLOBAL_BASE)

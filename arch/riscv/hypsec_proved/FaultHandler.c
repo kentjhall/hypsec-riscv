@@ -59,11 +59,11 @@ void handle_host_stage2_fault(unsigned long host_lr,
 	u32 ret;
 	u64 addr;
 
-	addr = read_sysreg(hpfar_el2);
+	addr = read_sysreg(hpfar_hs);
 	addr = (addr & HPFAR_MASK) * 256UL;
 	set_per_cpu_host_regs((u64)host_regs);
 
-	ret = emulate_mmio(addr, read_sysreg(esr_el2));
+	ret = emulate_mmio(addr, read_sysreg(esr_hs));
 	if (ret == V_INVALID)
 	{
 		map_page_host(addr);

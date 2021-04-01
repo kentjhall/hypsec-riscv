@@ -155,36 +155,36 @@
 #endif /* defined(__linux__) || ... */
 
 /* Loads and stores. These avoid undefined behavior due to unaligned memory
- * accesses, via el2_memcpy. */
+ * accesses, via hs_memcpy. */
 
 inline static uint16_t load16(uint8_t *b) {
   uint16_t x;
-  el2_memcpy(&x, b, 2);
+  hs_memcpy(&x, b, 2);
   return x;
 }
 
 inline static uint32_t load32(uint8_t *b) {
   uint32_t x;
-  el2_memcpy(&x, b, 4);
+  hs_memcpy(&x, b, 4);
   return x;
 }
 
 inline static uint64_t load64(uint8_t *b) {
   uint64_t x;
-  el2_memcpy(&x, b, 8);
+  hs_memcpy(&x, b, 8);
   return x;
 }
 
 inline static void store16(uint8_t *b, uint16_t i) {
-  el2_memcpy(b, &i, 2);
+  hs_memcpy(b, &i, 2);
 }
 
 inline static void store32(uint8_t *b, uint32_t i) {
-  el2_memcpy(b, &i, 4);
+  hs_memcpy(b, &i, 4);
 }
 
 inline static void store64(uint8_t *b, uint64_t i) {
-  el2_memcpy(b, &i, 8);
+  hs_memcpy(b, &i, 8);
 }
 
 /* Legacy accessors so that this header can serve as an implementation of

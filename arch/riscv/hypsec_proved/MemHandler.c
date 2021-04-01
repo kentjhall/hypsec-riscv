@@ -1,6 +1,6 @@
 #include "hypsec.h"
 
-void el2_clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
+void hs_clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
 	u32 power;
 
@@ -11,7 +11,7 @@ void el2_clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 	}
 }
 
-void __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index)
+void __hs_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index)
 {
 	u64 pfn, gfn, pte;
 
@@ -22,7 +22,7 @@ void __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index)
 	smmu_map_page(cbndx, index, iova, pte);
 }
 
-void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
+void hs_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 {
 	u64 n;
 

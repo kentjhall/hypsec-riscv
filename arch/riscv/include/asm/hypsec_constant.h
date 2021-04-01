@@ -45,7 +45,7 @@
 #define S2_PTE_SHIFT PAGE_SHIFT
 #define PMD_TABLE_SHIFT PMD_SHIFT 
 
-#define COREVISOR EL2_MAX_VMID
+#define COREVISOR HS_MAX_VMID
 #define HOSTVISOR 0
 #define MAX_SHARE_COUNT 100
 #define UNUSED 0
@@ -69,9 +69,9 @@
 #define V_SPSR_UND	38
 #define V_SPSR_IRQ	39
 #define V_SPSR_FIQ	40
-#define V_FAR_EL2	41
-#define V_HPFAR_EL2	42
-#define V_HCR_EL2	43
+#define V_FAR_HS	41
+#define V_HPFAR_HS	42
+#define V_HCR_HS	43
 #define V_EC		44
 #define V_DIRTY		45
 #define V_FLAGS		46

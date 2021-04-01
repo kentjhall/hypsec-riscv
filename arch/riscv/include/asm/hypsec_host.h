@@ -16,17 +16,17 @@
 #define SHADOW_SYS_REGS_SIZE		(sizeof(struct kvm_vcpu_csr)/sizeof(unsigned long))
 #define SHADOW_32BIT_REGS_SIZE		0
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
-#define NUM_SHADOW_VCPU_CTXT		(EL2_MAX_VMID * HYPSEC_MAX_VCPUS)
+#define NUM_SHADOW_VCPU_CTXT		(HS_MAX_VMID * HYPSEC_MAX_VCPUS)
 
 #define VCPU_IDX(vmid, vcpu_id) \
 	(vmid * HYPSEC_MAX_VCPUS) + vcpu_id
 
 struct shared_data {
-	struct kvm kvm_pool[EL2_MAX_VMID];
-	struct kvm_vcpu vcpu_pool[EL2_MAX_VMID * HYPSEC_MAX_VCPUS];
+	struct kvm kvm_pool[HS_MAX_VMID];
+	struct kvm_vcpu vcpu_pool[HS_MAX_VMID * HYPSEC_MAX_VCPUS];
 };
 
-struct el2_per_cpu_data {
+struct hs_per_cpu_data {
 	int vmid;
 	int vcpu_id;
 	struct s2_host_regs *host_regs;
@@ -47,11 +47,11 @@ enum hypsec_init_state {
 	ACTIVE
 };
 
-struct el2_load_info {
+struct hs_load_info {
 	unsigned long load_addr;
 	unsigned long size;
-	unsigned long el2_remap_addr;
-	int el2_mapped_pages;
+	unsigned long hs_remap_addr;
+	int hs_mapped_pages;
 	uint8_t signature[64];
 };
 
@@ -63,14 +63,14 @@ struct int_vcpu {
 	u32 first_run;
 };
 
-struct el2_vm_info {
+struct hs_vm_info {
 	u64 hgatp;
 	int vmid;
 	int load_info_cnt;
 	int kvm_pg_cnt;
 	bool inc_exe;
 	enum hypsec_init_state state;
-	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
+	struct hs_load_info load_info[HYPSEC_MAX_LOAD_IMG];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t vm_lock;
 	struct kvm *kvm;
@@ -86,7 +86,7 @@ struct el2_vm_info {
 	unsigned long used_pages;
 };
 
-struct el2_data {
+struct hs_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];
 	struct s2_cpu_arch arch;
@@ -102,7 +102,7 @@ struct el2_data {
 
 	arch_spinlock_t s2pages_lock;
 	arch_spinlock_t abs_lock;
-	arch_spinlock_t el2_pt_lock;
+	arch_spinlock_t hs_pt_lock;
 	arch_spinlock_t console_lock;
 	arch_spinlock_t smmu_lock;
 	arch_spinlock_t spt_lock;
@@ -115,19 +115,19 @@ struct el2_data {
 
 	struct s2_sys_reg_desc s2_sys_reg_descs[SHADOW_SYS_REGS_DESC_SIZE];
 
-	struct el2_vm_info vm_info[EL2_VM_INFO_SIZE];
+	struct hs_vm_info vm_info[HS_VM_INFO_SIZE];
 	int used_vm_info;
 	unsigned long last_remap_ptr;
 
-	struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
-	struct el2_arm_smmu_device smmus[SMMU_NUM];
-	int el2_smmu_num;
+	struct hs_smmu_cfg smmu_cfg[HS_SMMU_CFG_SIZE];
+	struct hs_arm_smmu_device smmus[SMMU_NUM];
+	int hs_smmu_num;
 
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
 	bool installed;
 
-	struct el2_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
+	struct hs_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
 
 	unsigned long core_start, core_end;
 
@@ -145,7 +145,7 @@ struct el2_data {
 	u64 phys_mem_size;
 };
 
-void init_el2_data_page(void);
+void init_hs_data_page(void);
 
 #define _arch_spin_is_locked(x)	(READ_ONCE((x)->lock) != 0)
 
@@ -189,10 +189,10 @@ static inline void stage2_spin_unlock(arch_spinlock_t *lock)
 	_arch_spin_unlock(lock);
 }
 
-static inline void el2_init_vgic_cpu_base(phys_addr_t base)
+static inline void hs_init_vgic_cpu_base(phys_addr_t base)
 {
-	struct el2_data *el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	el2_data->vgic_cpu_base = base;
+	struct hs_data *hs_data = (void *)kvm_ksym_ref(hs_data_start);
+	hs_data->vgic_cpu_base = base;
 }
 
 extern void __noreturn __hyp_panic(void);
@@ -201,30 +201,30 @@ extern void printhex_ul(unsigned long input);
 extern void print_string(char *input);
 
 extern void stage2_inject_el1_fault(unsigned long addr);
-void el2_memset(void *b, int c, int len);
-void el2_memcpy(void *dest, void *src, size_t len);
-int el2_memcmp(void *dest, void *src, size_t len);
+void hs_memset(void *b, int c, int len);
+void hs_memcpy(void *dest, void *src, size_t len);
+int hs_memcmp(void *dest, void *src, size_t len);
 
-int el2_hex_to_bin(char ch);
-int el2_hex2bin(unsigned char *dst, const char *src, int count);
+int hs_hex_to_bin(char ch);
+int hs_hex2bin(unsigned char *dst, const char *src, int count);
 
-extern void el2_smmu_alloc_pgd(u32 cbndx, u32 vmid, u32 num);
-extern void el2_smmu_free_pgd(u32 cbndx, u32 num);
-extern void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
-extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
-extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
+extern void hs_smmu_alloc_pgd(u32 cbndx, u32 vmid, u32 num);
+extern void hs_smmu_free_pgd(u32 cbndx, u32 num);
+extern void hs_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
+extern phys_addr_t hs_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
+extern void hs_smmu_clear(u64 iova, u32 cbndx, u32 num);
 extern void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
-extern void el2_boot_from_inc_exe(u32 vmid);
-extern bool el2_use_inc_exe(u32 vmid);
+extern void hs_boot_from_inc_exe(u32 vmid);
+extern bool hs_use_inc_exe(u32 vmid);
 
-extern int el2_alloc_vm_info(struct kvm *kvm);
+extern int hs_alloc_vm_info(struct kvm *kvm);
 
 u32 handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 void load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
-//extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
+//extern void set_pfn_owner(struct hs_data *hs_data, phys_addr_t addr,
 //				unsigned long pgnum, u32 vmid);
 
 extern phys_addr_t host_alloc_stage2_page(unsigned int num);
@@ -241,61 +241,61 @@ extern int hypsec_register_vcpu(u32 vmid, int vcpu_id);
 extern u32 __hypsec_register_kvm(void);
 extern int __hypsec_register_vcpu(u32 vmid, int vcpu_id);
 
-struct el2_vm_info* vmid_to_vm_info(u32 vmid);
-struct int_vcpu* vcpu_id_to_int_vcpu(struct el2_vm_info *vm_info, int vcpu_id);
+struct hs_vm_info* vmid_to_vm_info(u32 vmid);
+struct int_vcpu* vcpu_id_to_int_vcpu(struct hs_vm_info *vm_info, int vcpu_id);
 
-extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
+extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct hs_data *hs_data);
 
 extern struct kvm* hypsec_alloc_vm(u32 vmid);
 extern struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id);
 
 static void inline set_per_cpu(int vmid, int vcpu_id)
 {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	int pcpuid = smp_processor_id();
-	el2_data->per_cpu_data[pcpuid].vmid = vmid;
-	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
+	hs_data->per_cpu_data[pcpuid].vmid = vmid;
+	hs_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
 };
 
 //int get_cur_vmid(void);
 //int get_cur_vcpu_id(void);
 static int inline get_cur_vmid(void)
 {
-        struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	int pcpuid = smp_processor_id();
-	return el2_data->per_cpu_data[pcpuid].vmid;
+	return hs_data->per_cpu_data[pcpuid].vmid;
 };
 
 static int inline get_cur_vcpu_id(void)
 {
-        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+        struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int pcpuid = smp_processor_id();
-	return el2_data->per_cpu_data[pcpuid].vcpu_id;
+	return hs_data->per_cpu_data[pcpuid].vcpu_id;
 };
 
 
 static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 {
-        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+        struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
 	if (index < 35)
-		val = ((unsigned long *)&el2_data->shadow_vcpu_ctxt[offset].ctxt)[index];
-	else if (index == V_FAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
-	else if (index == V_HPFAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].hpfar;
-	else if (index == V_HCR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].hcr_el2;
+		val = ((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].ctxt)[index];
+	else if (index == V_FAR_HS)
+		val = hs_data->shadow_vcpu_ctxt[offset].far_hs;
+	else if (index == V_HPFAR_HS)
+		val = hs_data->shadow_vcpu_ctxt[offset].hpfar;
+	else if (index == V_HCR_HS)
+		val = hs_data->shadow_vcpu_ctxt[offset].hcr_hs;
 	else if (index == V_EC)
-		val = el2_data->shadow_vcpu_ctxt[offset].ec;
+		val = hs_data->shadow_vcpu_ctxt[offset].ec;
 	else if (index == V_DIRTY)
-		val = el2_data->shadow_vcpu_ctxt[offset].dirty;
+		val = hs_data->shadow_vcpu_ctxt[offset].dirty;
 	else if (index == V_FLAGS)
-		val = el2_data->shadow_vcpu_ctxt[offset].flags;
+		val = hs_data->shadow_vcpu_ctxt[offset].flags;
 	else if (index >= SYSREGS_START) {
 		index -= SYSREGS_START;
-		val = ((unsigned long *)&el2_data->shadow_vcpu_ctxt[offset].csr)[index];
+		val = ((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].csr)[index];
 	} else {
 		print_string("\rinvalid get shadow ctxt\n");
 		val = INVALID64;
@@ -306,26 +306,26 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 
 //TODO: Define the following
 static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+        struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
-	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
+	//hs_data->shadow_vcpu_ctxt[offset].regs[index] = value;
 	if (index < 35)
-		((unsigned long *)&el2_data->shadow_vcpu_ctxt[offset].ctxt)[index] = value;
-	else if (index == V_FAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
-	else if (index == V_HPFAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].hpfar = value;
-	else if (index == V_HCR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].hcr_el2 = value;
+		((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].ctxt)[index] = value;
+	else if (index == V_FAR_HS)
+		hs_data->shadow_vcpu_ctxt[offset].far_hs = value;
+	else if (index == V_HPFAR_HS)
+		hs_data->shadow_vcpu_ctxt[offset].hpfar = value;
+	else if (index == V_HCR_HS)
+		hs_data->shadow_vcpu_ctxt[offset].hcr_hs = value;
 	else if (index == V_EC)
-		el2_data->shadow_vcpu_ctxt[offset].ec = value;
+		hs_data->shadow_vcpu_ctxt[offset].ec = value;
 	else if (index == V_DIRTY)
-		el2_data->shadow_vcpu_ctxt[offset].dirty = value;
+		hs_data->shadow_vcpu_ctxt[offset].dirty = value;
 	else if (index == V_FLAGS)
-		el2_data->shadow_vcpu_ctxt[offset].flags = value;
+		hs_data->shadow_vcpu_ctxt[offset].flags = value;
 	else if (index >= SYSREGS_START) {
 		index -= SYSREGS_START;
-		((unsigned long *)&el2_data->shadow_vcpu_ctxt[offset].csr)[index] = value;
+		((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].csr)[index] = value;
 	} else
 		print_string("\rinvalid set shadow ctxt\n");
 }
@@ -339,23 +339,23 @@ void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 
-void init_hacl_hash(struct el2_data *el2_data);
+void init_hacl_hash(struct hs_data *hs_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
 uint32_t get_hacl_hash_sha2_constant_k224_256(int i);
 
 static u64 inline get_pt_hgatp(u32 vmid)
 {
-	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	if (vmid < COREVISOR) {
-		return el2_data->vm_info[vmid].hgatp;
+		return hs_data->vm_info[vmid].hgatp;
 	} else {
 		return csr_read(CSR_SATP);
 	}
 }
 
 static void inline set_pt_hgatp(u32 vmid, u64 hgatp) {
-	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	el2_data->vm_info[vmid].hgatp = hgatp;
+	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
+	hs_data->vm_info[vmid].hgatp = hgatp;
 };
 
 void handle_host_hvc(struct s2_host_regs *hr);

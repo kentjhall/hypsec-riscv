@@ -16,7 +16,7 @@ u32 emulate_mmio(u64 addr, u32 hsr)
 	return ret;
 }
 
-void  __el2_free_smmu_pgd(u32 cbndx, u32 index)
+void  __hs_free_smmu_pgd(u32 cbndx, u32 index)
 {
 	u32 vmid, power;
 
@@ -37,7 +37,7 @@ void  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 	release_lock_smmu();
 }
 
-void  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
+void  __hs_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 {
 	u32 target_vmid, num_context_banks;
 
@@ -86,7 +86,7 @@ void smmu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte)
 	release_lock_smmu();
 }
 
-u64 __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
+u64 __hs_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 {
 	u64 pte, ret;
 
@@ -95,7 +95,7 @@ u64 __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	return ret;
 }
 
-void __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
+void __hs_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
 	u32 vmid;
 

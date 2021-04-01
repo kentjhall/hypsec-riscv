@@ -18,8 +18,8 @@
 #obj-y += Helper.o
 #obj-y += VCPUOpsAux.o
 #obj-y += VCPUOps.o
-obj-y += el1.o
-#obj-y += el2.o
+obj-y += vs.o
+#obj-y += hs.o
 ##obj-y += mmap.o
 ##obj-y += sysreg-sr.o
 #obj-y += sysreg-sr-opt.o

@@ -93,7 +93,7 @@ void restore_shadow_kvm_regs()
 		}
 
 		set_shadow_dirty_bit(vmid, vcpuid, 0UL);
-		set_shadow_ctxt(vmid, vcpuid, V_FAR_EL2, 0UL);
+		set_shadow_ctxt(vmid, vcpuid, V_FAR_HS, 0UL);
 		addr = get_vm_fault_addr(vmid, vcpuid);
 
 		//TODO: Xupeng did not do exactly the same here...

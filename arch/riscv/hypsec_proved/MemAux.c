@@ -54,7 +54,7 @@ void clear_vm_page(u32 vmid, u64 pfn)
 		set_pfn_count(pfn, 0U);
 		set_pfn_map(pfn, 0UL);
 		clear_phys_page(pfn);
-		__flush_dcache_area(__el2_va(pfn << PAGE_SHIFT), PAGE_SIZE);
+		__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	}
 	release_lock_s2page();
 }
@@ -111,7 +111,7 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	{
 		v_panic();
 	}
-	__flush_dcache_area(__el2_va(pfn << PAGE_SHIFT), PAGE_SIZE);
+	__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	release_lock_s2page();
 }
 
@@ -243,7 +243,7 @@ void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 		if (owner == HOSTVISOR)
 		{
 			count = get_pfn_count(pfn);
-			if (count < EL2_SMMU_CFG_SIZE)
+			if (count < HS_SMMU_CFG_SIZE)
 			{
 				set_pfn_count(pfn, count + 1U);
 			}

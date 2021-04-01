@@ -28,7 +28,7 @@ void reset_gp_regs(u32 vmid, u32 vcpuid)
 }
 
 //TODO: Embed this function in reset_sys_regs
-static inline u64 el2_reset_mpidr(u32 vcpu_id)
+static inline u64 hs_reset_mpidr(u32 vcpu_id)
 {
 	u64 mpidr;
 	mpidr = (vcpu_id & 0x0f) << MPIDR_LEVEL_SHIFT(0);
@@ -49,7 +49,7 @@ void reset_sys_regs(u32 vmid, u32 vcpuid)
 			//u64 mpidr = (vcpuid % 16U) + ((vcpuid / 16U) % 256U) * 256U +
 			//                      ((vcpuid / 4096U) % 256U) * 65536U;
 			//val = mpidr + 2147483648UL;
-			val = el2_reset_mpidr(vcpuid);
+			val = hs_reset_mpidr(vcpuid);
 		}
 		else if (i == ACTLR_EL1)
 		{
@@ -120,7 +120,7 @@ void prep_abort(u32 vmid, u32 vcpuid)
 
 	esr = get_int_esr(vmid, vcpuid);
 	Rd = (u32)((esr / 65536UL) % 32UL);
-	fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2) / 16UL) * 4096UL;
+	fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_HS) / 16UL) * 4096UL;
 
 	//TODO: sync with verified code to support QEMU 3.0
 	if (fault_ipa < MAX_MMIO_ADDR || fault_ipa >= 0x4000000000)

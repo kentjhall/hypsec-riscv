@@ -60,24 +60,24 @@ Hacl_Hash_Core_SHA2_Constants_k384_512[80U] =
     (uint64_t)0x5fcb6fab3ad6faecU, (uint64_t)0x6c44198c4a475817U
   };
 
-void init_hacl_hash(struct el2_data *el2_data)
+void init_hacl_hash(struct hs_data *hs_data)
 {
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-	memcpy(el2_data->hacl_hash0, Hacl_Hash_Core_SHA2_Constants_k224_256, sizeof(uint32_t)*64);
-	memcpy(el2_data->hacl_hash, Hacl_Hash_Core_SHA2_Constants_k384_512, sizeof(uint64_t)*80);
-	el2_memcpy(el2_data->key, key, 16);
+	memcpy(hs_data->hacl_hash0, Hacl_Hash_Core_SHA2_Constants_k224_256, sizeof(uint32_t)*64);
+	memcpy(hs_data->hacl_hash, Hacl_Hash_Core_SHA2_Constants_k384_512, sizeof(uint64_t)*80);
+	hs_memcpy(hs_data->key, key, 16);
 }
 
 uint32_t get_hacl_hash_sha2_constant_k224_256(int i)
 {
-	struct el2_data *el2_data;
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return el2_data->hacl_hash0[i];
+	struct hs_data *hs_data;
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	return hs_data->hacl_hash0[i];
 }
 
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i)
 {
-	struct el2_data *el2_data;
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return el2_data->hacl_hash[i];
+	struct hs_data *hs_data;
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	return hs_data->hacl_hash[i];
 }

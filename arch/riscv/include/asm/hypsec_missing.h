@@ -6,13 +6,13 @@ void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 			       struct shadow_vcpu_context *shadow_ctxt) {};
 
 void update_exception_gp_regs(struct shadow_vcpu_context *shadow_ctxt);
-extern int sec_el2_handle_sys_reg(u32 esr);
+extern int sec_hs_handle_sys_reg(u32 esr);
 void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 			    struct shadow_vcpu_context *shadow_ctxt, u64 ec) {};
 
 void hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state);
 
-void el2_memset(void *b, int c, int len);
-void el2_memcpy(void *dest, void *src, size_t len);
+void hs_memset(void *b, int c, int len);
+void hs_memcpy(void *dest, void *src, size_t len);
 
 void reset_fp_regs(u32 vmid, int vcpu_id);

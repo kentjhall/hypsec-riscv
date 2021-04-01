@@ -7,7 +7,7 @@
 
 #define SMMU_NUM_CTXT_BANKS	8
 #define SMMU_NUM		2
-#define EL2_SMMU_CFG_SIZE	SMMU_NUM_CTXT_BANKS * SMMU_NUM
+#define HS_SMMU_CFG_SIZE	SMMU_NUM_CTXT_BANKS * SMMU_NUM
 
 /* FIXME: Hardcoded SMMU addresses now.. */
 #define SMMU_BASE(smmu)		smmu.phys_base
@@ -16,13 +16,13 @@
 /* Maximum number of context banks per SMMU */
 #define ARM_SMMU_MAX_CBS		128
 
-struct el2_smmu_cfg {
+struct hs_smmu_cfg {
 	u32 vmid;
 	u64 hw_ttbr;
 };
 
 
-struct el2_arm_smmu_device {
+struct hs_arm_smmu_device {
 	u64				phys_base;
 	u64				size;
 	unsigned long			pgshift;
@@ -53,5 +53,5 @@ struct el2_arm_smmu_device {
 	u32				index;
 };
 
-struct el2_smmu_cfg* alloc_smmu_cfg(struct el2_data *el2_data);
+struct hs_smmu_cfg* alloc_smmu_cfg(struct hs_data *hs_data);
 #endif /* __RISCV_STAGE2_MMIO__ */

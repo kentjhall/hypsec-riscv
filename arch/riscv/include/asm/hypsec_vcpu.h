@@ -6,8 +6,8 @@ struct s2_host_regs {
 };
 
 struct s2_cpu_arch {
-	u64 host_hcr_el2;
-	u64 host_vttbr_el2;
+	u64 host_hcr_hs;
+	u64 host_vttbr_hs;
 };
 
 struct s2_sys_reg_params {
@@ -41,7 +41,7 @@ void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 			       struct shadow_vcpu_context *shadow_ctxt);
 
 void update_exception_gp_regs(struct shadow_vcpu_context *shadow_ctxt);
-extern int sec_el2_handle_sys_reg(u32 esr);
+extern int sec_hs_handle_sys_reg(u32 esr);
 
 void hypsec_inject_undef(struct shadow_vcpu_context *shadow_ctxt);
 

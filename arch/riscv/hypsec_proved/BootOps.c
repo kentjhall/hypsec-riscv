@@ -337,7 +337,7 @@ void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 	release_lock_vm(vmid);
 }
 
-void __el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
+void __hs_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
 {
         phys_addr_t hpa = (phys_addr_t)buf;
 	u64 tmp_pa;
@@ -353,14 +353,14 @@ void __el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
 	else
 	{
 		tmp_pa = get_tmp_buf();
-        	encrypt_buf(vmid, (u64)__el2_va(hpa), (u64)tmp_pa, PAGE_SIZE);
-        	el2_memcpy(__el2_va(out_buf), (void*)tmp_pa, PAGE_SIZE);
+        	encrypt_buf(vmid, (u64)__hs_va(hpa), (u64)tmp_pa, PAGE_SIZE);
+        	hs_memcpy(__hs_va(out_buf), (void*)tmp_pa, PAGE_SIZE);
 	}
 
 	release_lock_s2page();
 }
 
-void __el2_decrypt_buf(u32 vmid, void *buf, u32 len)
+void __hs_decrypt_buf(u32 vmid, void *buf, u32 len)
 {
 	u64 pfn = (u64)buf >> PAGE_SHIFT;
         u64 tmp_pa;
@@ -382,8 +382,8 @@ void __el2_decrypt_buf(u32 vmid, void *buf, u32 len)
 		set_pfn_map(pfn, INVALID64);
 		clear_pfn_host(pfn);
 
-		decrypt_buf(vmid, (u64)__el2_va(buf), (u64)tmp_pa, len);
-		el2_memcpy(__el2_va(buf), (void*)tmp_pa, PAGE_SIZE);
+		decrypt_buf(vmid, (u64)__hs_va(buf), (u64)tmp_pa, len);
+		hs_memcpy(__hs_va(buf), (void*)tmp_pa, PAGE_SIZE);
 
 		release_lock_s2page();
 	}

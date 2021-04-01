@@ -166,9 +166,9 @@ struct kvm_vcpu_csr {
 
 struct shadow_vcpu_context {
 	struct kvm_cpu_context ctxt;
-        u64 far_el2;
+        u64 far_hs;
         u64 hpfar;
-        u64 hcr_el2;
+        u64 hcr_hs;
         u64 ec;
         u64 dirty;
         u64 flags;

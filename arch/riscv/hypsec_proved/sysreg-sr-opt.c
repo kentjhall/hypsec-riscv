@@ -28,7 +28,7 @@ static void __vm_sysreg_save_user_state(struct shadow_vcpu_context *ctxt)
 
 static void __vm_sysreg_save_el1_state(struct shadow_vcpu_context *ctxt)
 {
-	ctxt->sys_regs[MPIDR_EL1] = read_sysreg(vmpidr_el2);
+	ctxt->sys_regs[MPIDR_EL1] = read_sysreg(vmpidr_hs);
 	ctxt->sys_regs[CSSELR_EL1] = read_sysreg(csselr_el1);
 	ctxt->sys_regs[SCTLR_EL1] = read_sysreg_el1(sctlr);
 	ctxt->sys_regs[ACTLR_EL1] = read_sysreg(actlr_el1);
@@ -53,15 +53,15 @@ static void __vm_sysreg_save_el1_state(struct shadow_vcpu_context *ctxt)
 	ctxt->gp_regs.spsr[0] = read_sysreg_el1(spsr);	
 }
 
-static void __vm_sysreg_save_el2_return_state(struct shadow_vcpu_context *ctxt)
+static void __vm_sysreg_save_hs_return_state(struct shadow_vcpu_context *ctxt)
 {
-	ctxt->gp_regs.regs.pc = read_sysreg_el2(elr);
-	ctxt->gp_regs.regs.pstate = read_sysreg_el2(spsr);
+	ctxt->gp_regs.regs.pc = read_sysreg_hs(elr);
+	ctxt->gp_regs.regs.pstate = read_sysreg_hs(spsr);
 }
 
 static void __vm_sysreg_restore_el1_state(struct shadow_vcpu_context *ctxt)
 {
-	write_sysreg(ctxt->sys_regs[MPIDR_EL1],	vmpidr_el2);
+	write_sysreg(ctxt->sys_regs[MPIDR_EL1],	vmpidr_hs);
 	write_sysreg(ctxt->sys_regs[CSSELR_EL1], csselr_el1);
 	write_sysreg_el1(ctxt->sys_regs[SCTLR_EL1], sctlr);
 	write_sysreg(ctxt->sys_regs[ACTLR_EL1],	actlr_el1);
@@ -98,10 +98,10 @@ static void __vm_sysreg_restore_common_state(struct shadow_vcpu_context *ctxt)
 }
 
 static void
-__vm_sysreg_restore_el2_return_state(struct shadow_vcpu_context *ctxt)
+__vm_sysreg_restore_hs_return_state(struct shadow_vcpu_context *ctxt)
 {
-	write_sysreg_el2(ctxt->gp_regs.regs.pc, elr);
-	write_sysreg_el2(ctxt->gp_regs.regs.pstate, spsr);
+	write_sysreg_hs(ctxt->gp_regs.regs.pc, elr);
+	write_sysreg_hs(ctxt->gp_regs.regs.pstate, spsr);
 }
 
 static void
@@ -116,7 +116,7 @@ void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt)
 	__vm_sysreg_restore_el1_state(ctxt);
 	__vm_sysreg_restore_common_state(ctxt);
 	__vm_sysreg_restore_user_state(ctxt);
-	__vm_sysreg_restore_el2_return_state(ctxt);
+	__vm_sysreg_restore_hs_return_state(ctxt);
 }
 
 void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt)
@@ -124,5 +124,5 @@ void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt)
 	__vm_sysreg_save_el1_state(ctxt);
 	__vm_sysreg_save_common_state(ctxt);
 	__vm_sysreg_save_user_state(ctxt);
-	__vm_sysreg_save_el2_return_state(ctxt);
+	__vm_sysreg_save_hs_return_state(ctxt);
 }

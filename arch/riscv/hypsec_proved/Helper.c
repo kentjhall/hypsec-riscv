@@ -23,11 +23,11 @@ static inline void senduart(char word)
 {
 	unsigned long base, addr;
 	int offset, timeout = 10000;
-	struct el2_data *el2_data;
+	struct hs_data *hs_data;
 	u8 val;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	base = el2_data->uart_8250_base;
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	base = hs_data->uart_8250_base;
 	//TODO: use macro instead
 	offset = 5;
 	addr = offset + base;
@@ -53,10 +53,10 @@ static inline void senduart(char word)
 static inline unsigned long waituart(void)
 {
 	unsigned long ret, base, REG_FR;
-	struct el2_data *el2_data;
+	struct hs_data *hs_data;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	base = el2_data->pl011_base;
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	base = hs_data->pl011_base;
 	REG_FR = UART01x_FR;
 
 	asm volatile (
@@ -74,10 +74,10 @@ static inline unsigned long waituart(void)
 static inline void senduart(char word)
 {
 	unsigned long base;
-	struct el2_data *el2_data;
+	struct hs_data *hs_data;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	base = el2_data->pl011_base;
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	base = hs_data->pl011_base;
 
 	while (waituart() & UART01x_FR_TXFF)
 		cpu_relax();
@@ -97,11 +97,11 @@ void printhex_ul(unsigned long input)
 {
 	char word;
 	int len = 60;
-	struct el2_data *el2_data;
+	struct hs_data *hs_data;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 
-	stage2_spin_lock(&el2_data->console_lock);
+	stage2_spin_lock(&hs_data->console_lock);
 
 	word = '\r';
 	senduart(word);
@@ -126,17 +126,17 @@ void printhex_ul(unsigned long input)
 	word = '\n';
 	senduart(word);
 
-	stage2_spin_unlock(&el2_data->console_lock);
+	stage2_spin_unlock(&hs_data->console_lock);
 }
 
 void print_string(char *input)
 {
 	char *word;
-	struct el2_data *el2_data;
+	struct hs_data *hs_data;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 
-	stage2_spin_lock(&el2_data->console_lock);
+	stage2_spin_lock(&hs_data->console_lock);
 
 	word = input;
 	while (*word != '\0') {
@@ -144,10 +144,10 @@ void print_string(char *input)
 		word++;
 	}
 
-	stage2_spin_unlock(&el2_data->console_lock);
+	stage2_spin_unlock(&hs_data->console_lock);
 }
 
-void el2_memset(void *b, int c, int len)
+void hs_memset(void *b, int c, int len)
 {
 	char *s = b;
 
@@ -155,7 +155,7 @@ void el2_memset(void *b, int c, int len)
             *s++ = c;
 }
 
-void el2_memcpy(void *dest, void *src, size_t len)
+void hs_memcpy(void *dest, void *src, size_t len)
 {
 	char *cdest = dest;
 	char *csrc = src;
@@ -164,7 +164,7 @@ void el2_memcpy(void *dest, void *src, size_t len)
             *cdest++ = *csrc++;
 }
 
-int el2_memcmp(void *dest, void *src, size_t len)
+int hs_memcmp(void *dest, void *src, size_t len)
 {
 	char *cdest = dest;
 	char *csrc = src;
@@ -179,7 +179,7 @@ int el2_memcmp(void *dest, void *src, size_t len)
  * Assumes lowercase char (if a letter).
  * Copied from lib/hexdump.c
  */
-int el2_hex_to_bin(char ch)
+int hs_hex_to_bin(char ch)
 {
 	if ((ch >= '0') && (ch <= '9'))
 		return ch - '0';
@@ -198,11 +198,11 @@ int el2_hex_to_bin(char ch)
  *
  * Return 0 on success, -1 in case of bad input.
  */
-int el2_hex2bin(unsigned char *dst, const char *src, int count)
+int hs_hex2bin(unsigned char *dst, const char *src, int count)
 {
 	while (count--) {
-		int hi = el2_hex_to_bin(*src++);
-		int lo = el2_hex_to_bin(*src++);
+		int hi = hs_hex_to_bin(*src++);
+		int lo = hs_hex_to_bin(*src++);
 
 		if ((hi < 0) || (lo < 0))
 			return -1;
