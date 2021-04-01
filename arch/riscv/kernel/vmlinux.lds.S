@@ -10,6 +10,9 @@
 #include <asm/cache.h>
 #include <asm/thread_info.h>
 #include <asm/set_memory.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_pgtable.h>
+#endif
 #include "image-vars.h"
 
 #include <linux/sizes.h>
@@ -125,6 +128,36 @@ SECTIONS
 	__pecoff_data_virt_size = ABSOLUTE(. - __pecoff_text_end);
 #endif
 	_end = .;
+
+/*
+ * NOTE: this is sketchy; putting after _end is probably wrong,
+ * but it's the only way it boots (it seems moving _end too far
+ * forward messes things up for some reason), so we'll see.
+ */
+#ifdef CONFIG_VERIFIED_KVM
+	. = ALIGN(SECTION_ALIGN);
+	stage2_pgs_start = .;
+	. += STAGE2_PAGES_SIZE;
+	stage2_pgs_end = .;
+
+	smmu_pgs_start = .;
+	. += SMMU_PAGES_SIZE;
+	smmu_pgs_end = .;
+
+	stage2_tmp_pgs_start = .;
+	. += PAGE_SIZE;
+	stage2_tmp_pgs_end = .;
+
+	. = ALIGN(PAGE_SIZE);
+	el2_data_start = .;
+	. += CORE_DATA_SIZE;
+	el2_data_end = .;
+
+	. = ALIGN(PAGE_SIZE);
+	shared_data_start = .;
+	. += PAGE_SIZE * (PAGE_SIZE * 4);
+	shared_data_end = .;
+#endif
 
 	STABS_DEBUG
 	DWARF_DEBUG

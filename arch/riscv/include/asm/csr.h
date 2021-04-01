@@ -81,6 +81,16 @@
 #define EXC_VIRTUAL_INST_FAULT	22
 #define EXC_STORE_GUEST_PAGE_FAULT	23
 
+#ifdef CONFIG_VERIFIED_KVM
+#define HEDELEG_HOST_FLAGS csr_read(CSR_MEDELEG)
+#define HIDELEG_HOST_FLAGS csr_read(CSR_MIDELEG)
+#define HEDELEG_GUEST_FLAGS (EXC_INST_MISALIGNED | EXC_BREAKPOINT |	\
+                             EXC_SYSCALL | EXC_INST_PAGE_FAULT		\
+                             EXC_LOAD_PAGE_FAULT | EXC_STORE_PAGE_FAULT)
+#define HIDELEG_GUEST_FLAGS ((1UL << IRQ_VS_SOFT) | (1UL << IRQ_VS_TIMER) | \
+                             (1UL << IRQ_VS_EXT))
+#endif
+
 /* PMP configuration */
 #define PMP_R			0x01
 #define PMP_W			0x02
@@ -189,6 +199,10 @@
 
 #define CSR_MSTATUS		0x300
 #define CSR_MISA		0x301
+#ifdef CONFIG_VERIFIED_KVM
+#define CSR_MEDELEG		0x302
+#define CSR_MIDELEG		0x303
+#endif
 #define CSR_MIE			0x304
 #define CSR_MTVEC		0x305
 #define CSR_MSCRATCH		0x340

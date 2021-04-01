@@ -13,6 +13,9 @@
 #include <linux/kvm.h>
 #include <linux/kvm_types.h>
 #include <asm/kvm_vcpu_timer.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_mmu.h>
+#endif
 
 #ifdef CONFIG_64BIT
 #define KVM_MAX_VCPUS			(1U << 16)
@@ -151,7 +154,37 @@ struct kvm_vcpu_csr {
 	unsigned long scounteren;
 };
 
+#ifdef CONFIG_VERIFIED_KVM
+#define DIRTY_PC_FLAG                   1UL << 32
+#define PENDING_DABT_INJECT             1UL << 33
+#define PENDING_IABT_INJECT             1UL << 34
+#define PENDING_UNDEF_INJECT            1UL << 35
+#define PENDING_FSC_FAULT               1UL << 1
+#define PENDING_EXCEPT_INJECT_FLAG      (PENDING_DABT_INJECT | \
+                                         PENDING_IABT_INJECT | \
+                                         PENDING_UNDEF_INJECT)
+
+struct shadow_vcpu_context {
+	struct kvm_cpu_context ctxt;
+        u64 far_el2;
+        u64 hpfar;
+        u64 hcr_el2;
+        u64 ec;
+        u64 dirty;
+        u64 flags;
+	struct kvm_vcpu_csr csr;
+        u32 esr;
+        u32 vmid;
+	union __riscv_fp_state fp;
+};
+#endif
+
 struct kvm_vcpu_arch {
+#ifdef CONFIG_VERIFIED_KVM
+	u32 vmid;
+	bool was_preempted;
+	struct s2_trans walk_result;
+#endif
 	/* VCPU ran atleast once */
 	bool ran_atleast_once;
 
@@ -177,6 +210,10 @@ struct kvm_vcpu_arch {
 
 	/* CPU CSR context upon Guest VCPU reset */
 	struct kvm_vcpu_csr guest_reset_csr;
+
+#ifdef CONFIG_VERIFIED_KVM
+	struct kvm_cpu_trap guest_trap;
+#endif
 
 	/*
 	 * VCPU interrupts
@@ -211,6 +248,19 @@ struct kvm_vcpu_arch {
 	/* SRCU lock index for in-kernel run loop */
 	int srcu_idx;
 };
+
+#ifdef CONFIG_VERIFIED_KVM
+#define kvm_call_core(n, ...)				\
+	({						\
+		register long callno asm("a0") = n;	\
+		register long ret asm("a0");		\
+		asm volatile ("ecall\n"			\
+			      : "=r" (ret)		\
+			      : "r"(callno)		\
+			      : "memory");		\
+		ret;					\
+	})
+#endif
 
 static inline void kvm_arch_hardware_unsetup(void) {}
 static inline void kvm_arch_sync_events(struct kvm *kvm) {}

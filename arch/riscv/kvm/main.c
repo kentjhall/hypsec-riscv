@@ -13,6 +13,9 @@
 #include <asm/csr.h>
 #include <asm/hwcap.h>
 #include <asm/sbi.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 long kvm_arch_dev_ioctl(struct file *filp,
 			unsigned int ioctl, unsigned long arg)
@@ -25,13 +28,25 @@ int kvm_arch_check_processor_compat(void *opaque)
 	return 0;
 }
 
+/* #ifdef CONFIG_VERIFIED_KVM */
+/* static void install_hs_runtime(void *discard) */
+/* { */
+/* 	hvc_enable_s2_trans(); */
+/* } */
+/* #endif */
+
 int kvm_arch_hardware_setup(void *opaque)
 {
+/* #ifdef CONFIG_VERIFIED_KVM */
+/* 	on_each_cpu(install_hs_runtime, NULL, 1); */
+/* 	printk("HypSec HS runtime is installed\n"); */
+/* #endif */
 	return 0;
 }
 
 int kvm_arch_hardware_enable(void)
 {
+/* #ifndef CONFIG_VERIFIED_KVM */
 	unsigned long hideleg, hedeleg;
 
 	hedeleg = 0;
@@ -52,6 +67,7 @@ int kvm_arch_hardware_enable(void)
 	csr_write(CSR_HCOUNTEREN, -1UL);
 
 	csr_write(CSR_HVIP, 0);
+/* #endif */
 
 	return 0;
 }

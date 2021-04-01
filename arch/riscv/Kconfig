@@ -333,6 +333,12 @@ config FPU
 
 endmenu
 
+config VERIFIED_KVM
+	bool "Build verified KVM"
+	select VIRTUALIZATION
+	help
+	  Build verified KVM.
+
 menu "Kernel features"
 
 source "kernel/Kconfig.hz"

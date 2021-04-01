@@ -431,9 +431,9 @@ void kvm_vcpu_destroy(struct kvm_vcpu *vcpu)
 	put_pid(rcu_dereference_protected(vcpu->pid, 1));
 
 	free_page((unsigned long)vcpu->run);
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
-#endif
+/* #endif */
 }
 EXPORT_SYMBOL_GPL(kvm_vcpu_destroy);
 
@@ -3153,11 +3153,15 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
 	if (r)
 		goto vcpu_decrement;
 
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
-#else
-	vcpu = hypsec_alloc_vcpu(kvm->arch.mmu.vmid.vmid, id);
-#endif
+/* #else */
+/* #ifndef CONFIG_RISCV */
+/* 	vcpu = hypsec_alloc_vcpu(kvm->arch.mmu.vmid.vmid, id); */
+/* #else */
+/* 	vcpu = hypsec_alloc_vcpu(kvm->arch.vmid.vmid, id); */
+/* #endif */
+/* #endif */
 	if (!vcpu) {
 		r = -ENOMEM;
 		goto vcpu_decrement;
@@ -3223,9 +3227,9 @@ arch_vcpu_destroy:
 vcpu_free_run_page:
 	free_page((unsigned long)vcpu->run);
 vcpu_free:
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
-#endif
+/* #endif */
 vcpu_decrement:
 	mutex_lock(&kvm->lock);
 	kvm->created_vcpus--;

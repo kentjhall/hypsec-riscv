@@ -186,6 +186,44 @@ void asm_offsets(void)
 	OFFSET(KVM_ARCH_HOST_STVEC, kvm_vcpu_arch, host_stvec);
 	OFFSET(KVM_ARCH_HOST_SCOUNTEREN, kvm_vcpu_arch, host_scounteren);
 
+#ifdef CONFIG_VERIFIED_KVM
+	OFFSET(KVM_CPU_CONTEXT_ZERO, kvm_cpu_context, zero);
+	OFFSET(KVM_CPU_CONTEXT_RA, kvm_cpu_context, ra);
+	OFFSET(KVM_CPU_CONTEXT_SP, kvm_cpu_context, sp);
+	OFFSET(KVM_CPU_CONTEXT_GP, kvm_cpu_context, gp);
+	OFFSET(KVM_CPU_CONTEXT_TP, kvm_cpu_context, tp);
+	OFFSET(KVM_CPU_CONTEXT_T0, kvm_cpu_context, t0);
+	OFFSET(KVM_CPU_CONTEXT_T1, kvm_cpu_context, t1);
+	OFFSET(KVM_CPU_CONTEXT_T2, kvm_cpu_context, t2);
+	OFFSET(KVM_CPU_CONTEXT_S0, kvm_cpu_context, s0);
+	OFFSET(KVM_CPU_CONTEXT_S1, kvm_cpu_context, s1);
+	OFFSET(KVM_CPU_CONTEXT_A0, kvm_cpu_context, a0);
+	OFFSET(KVM_CPU_CONTEXT_A1, kvm_cpu_context, a1);
+	OFFSET(KVM_CPU_CONTEXT_A2, kvm_cpu_context, a2);
+	OFFSET(KVM_CPU_CONTEXT_A3, kvm_cpu_context, a3);
+	OFFSET(KVM_CPU_CONTEXT_A4, kvm_cpu_context, a4);
+	OFFSET(KVM_CPU_CONTEXT_A5, kvm_cpu_context, a5);
+	OFFSET(KVM_CPU_CONTEXT_A6, kvm_cpu_context, a6);
+	OFFSET(KVM_CPU_CONTEXT_A7, kvm_cpu_context, a7);
+	OFFSET(KVM_CPU_CONTEXT_S2, kvm_cpu_context, s2);
+	OFFSET(KVM_CPU_CONTEXT_S3, kvm_cpu_context, s3);
+	OFFSET(KVM_CPU_CONTEXT_S4, kvm_cpu_context, s4);
+	OFFSET(KVM_CPU_CONTEXT_S5, kvm_cpu_context, s5);
+	OFFSET(KVM_CPU_CONTEXT_S6, kvm_cpu_context, s6);
+	OFFSET(KVM_CPU_CONTEXT_S7, kvm_cpu_context, s7);
+	OFFSET(KVM_CPU_CONTEXT_S8, kvm_cpu_context, s8);
+	OFFSET(KVM_CPU_CONTEXT_S9, kvm_cpu_context, s9);
+	OFFSET(KVM_CPU_CONTEXT_S10, kvm_cpu_context, s10);
+	OFFSET(KVM_CPU_CONTEXT_S11, kvm_cpu_context, s11);
+	OFFSET(KVM_CPU_CONTEXT_T3, kvm_cpu_context, t3);
+	OFFSET(KVM_CPU_CONTEXT_T4, kvm_cpu_context, t4);
+	OFFSET(KVM_CPU_CONTEXT_T5, kvm_cpu_context, t5);
+	OFFSET(KVM_CPU_CONTEXT_T6, kvm_cpu_context, t6);
+	OFFSET(KVM_CPU_CONTEXT_SEPC, kvm_cpu_context, sepc);
+	OFFSET(KVM_CPU_CONTEXT_SSTATUS, kvm_cpu_context, sstatus);
+	OFFSET(KVM_CPU_CONTEXT_HSTATUS, kvm_cpu_context, hstatus);
+#endif
+
 	OFFSET(KVM_ARCH_TRAP_SEPC, kvm_cpu_trap, sepc);
 	OFFSET(KVM_ARCH_TRAP_SCAUSE, kvm_cpu_trap, scause);
 	OFFSET(KVM_ARCH_TRAP_STVAL, kvm_cpu_trap, stval);
@@ -464,4 +502,7 @@ void asm_offsets(void)
 	 * ensures the alignment is sane.
 	 */
 	DEFINE(PT_SIZE_ON_STACK, ALIGN(sizeof(struct pt_regs), STACK_ALIGN));
+#ifdef CONFIG_VERIFIED_KVM
+	DEFINE(KVM_CPU_CONTEXT_SIZE_ON_STACK, ALIGN(sizeof(struct kvm_cpu_context), STACK_ALIGN));
+#endif
 }

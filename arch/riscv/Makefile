@@ -77,6 +77,7 @@ head-y := arch/riscv/kernel/head.o
 core-y += arch/riscv/
 
 core-$(CONFIG_KVM) += arch/riscv/kvm/
+core-$(CONFIG_VERIFIED_KVM) += arch/riscv/hypsec_proved/
 
 libs-y += arch/riscv/lib/
 libs-$(CONFIG_EFI_STUB) += $(objtree)/drivers/firmware/efi/libstub/lib.a

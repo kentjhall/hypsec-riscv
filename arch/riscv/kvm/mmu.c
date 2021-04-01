@@ -858,3 +858,12 @@ unsigned long kvm_riscv_stage2_mode(void)
 {
 	return stage2_mode >> HGATP_MODE_SHIFT;
 }
+
+#ifdef CONFIG_VERIFIED_KVM
+int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
+                              unsigned long *haddr)
+{
+        *haddr = phys_addr;
+        return 0;
+}
+#endif

@@ -22,6 +22,15 @@ static inline void flush_dcache_page(struct page *page)
 }
 #define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE 1
 
+#ifdef CONFIG_VERIFIED_KVM
+static inline void __flush_dcache_area(void *addr, size_t len)
+{
+	void *iter;
+	for (iter = addr; iter < addr + len; iter += PAGE_SIZE)
+		flush_dcache_page(virt_to_page(iter));
+}
+#endif
+
 /*
  * RISC-V doesn't have an instruction to flush parts of the instruction cache,
  * so instead we just flush the whole thing.
