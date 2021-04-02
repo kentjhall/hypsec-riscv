@@ -14,6 +14,7 @@
 #include <linux/kvm_types.h>
 #include <asm/kvm_vcpu_timer.h>
 #ifdef CONFIG_VERIFIED_KVM
+#include <asm/sbi.h>
 #include <asm/hypsec_mmu.h>
 #endif
 
@@ -250,15 +251,32 @@ struct kvm_vcpu_arch {
 };
 
 #ifdef CONFIG_VERIFIED_KVM
-#define kvm_call_core(n, ...)				\
-	({						\
-		register long callno asm("a0") = n;	\
-		register long ret asm("a0");		\
-		asm volatile ("ecall\n"			\
-			      : "=r" (ret)		\
-			      : "r"(callno)		\
-			      : "memory");		\
-		ret;					\
+#define __get_7th_arg(arg1, arg2, arg3, arg4, arg5, arg6, arg7, ...) arg7
+
+#define __hvc_ecall_0(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__, 0, 0, 0, 0, 0)
+#define __hvc_ecall_1(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__, 0, 0, 0, 0)
+#define __hvc_ecall_2(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__, 0, 0, 0)
+#define __hvc_ecall_3(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__, 0, 0)
+#define __hvc_ecall_4(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__, 0)
+#define __hvc_ecall_5(...) \
+	sbi_ecall(SBI_EXT_HYPSEC_HVC, 0, __VA_ARGS__)
+
+#define __hvc_ecall_chooser(...) \
+	__get_7th_arg(__VA_ARGS__, __hvc_ecall_5, __hvc_ecall_4, __hvc_ecall_3, \
+                                   __hvc_ecall_2, __hvc_ecall_1, __hvc_ecall_0, )
+
+#define __hvc_ecall(...) \
+	__hvc_ecall_chooser(__VA_ARGS__)(__VA_ARGS__)
+
+#define kvm_call_core(...)					\
+	({							\
+		struct sbiret sr = __hvc_ecall(__VA_ARGS__);	\
+	 	sr.error;					\
 	})
 #endif
 

@@ -7,8 +7,8 @@
 #include <asm/cacheflush.h>
 #include <asm/hypsec_virt.h>
 #include <asm/hypsec_pgtable.h>
-#include <asm/hypsec_host.h>
 #include <asm/hypsec_asm.h>
+#include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
@@ -40,12 +40,9 @@ static void protect_hs_mem(void)
 #endif
 }
 
-#include <linux/sched/task_stack.h>
-void show_regs(struct pt_regs *regs);
-void hvc_enable_s2_trans()
+void hvc_enable_s2_trans(void)
 {
 	struct hs_data *hs_data;
-	extern void (*__kvm_riscv_host_switch)(void);
 
 	acquire_lock_core();
 	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
@@ -55,50 +52,40 @@ void hvc_enable_s2_trans()
 		hs_data->installed = true;
 	}
 
-#if 0
+#if 0 // TEMPORARY
 	csr_write(CSR_HGATP, hs_data->host_hgatp);
 #endif
-	csr_write(CSR_HGATP, HGATP_MODE_OFF); // TEMPORARY
-	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
-	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
-	csr_write(CSR_HCOUNTEREN, -1UL);
-	csr_write(CSR_HVIP, 0);
-	csr_write(CSR_HSTATUS, csr_read(CSR_HSTATUS) | HSTATUS_SPV);
-	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP);
-	csr_write(CSR_STVEC, __kvm_riscv_host_switch);
-	csr_write(CSR_SEPC, &&label);
-
 	__kvm_flush_vm_context();
 
 	release_lock_core();
-	pr_alert("HERE SRET, should go to: 0x%lx\n", (unsigned long)&&label);
-	show_regs(task_pt_regs(current));
-	__asm__("sret");
-label:
-	for(;;);
-	/* pr_alert("HERE SDONE lol\n"); */
 }
 
-void handle_host_hvc(struct s2_host_regs *hr)
+static void handle_host_hvc(struct kvm_cpu_context *hctxt)
 {
-#if 0
 	u32 ret;
 	u64 callno, arg1, arg2, arg3, arg4, arg5, ret64;
 
 	//vmid = get_cur_vmid();
 	//vcpuid = get_cur_vcpuid();
+#if 0 // TEMPORARY
 	set_per_cpu_host_regs((u64)hr);
-	arg1 = hr->regs[1];
-	arg2 = hr->regs[2];
-	arg3 = hr->regs[3];
-	arg4 = hr->regs[4];
-	arg5 = hr->regs[5];
+#endif
+	arg1 = hctxt->a1;
+	arg2 = hctxt->a2;
+	arg3 = hctxt->a3;
+	arg4 = hctxt->a4;
+	arg5 = hctxt->a5;
 
 	ret = 0;
 	ret64 = 0;
-	callno = hr->regs[0];
+	callno = hctxt->a0;
 
-	if (callno == HVC_VCPU_RUN)
+	if (callno == HVC_ENABLE_S2_TRANS)
+	{
+		hvc_enable_s2_trans();
+	}
+#if 0 // TEMPORARY
+	else if (callno == HVC_VCPU_RUN)
 	{
 		ret = (u64)__kvm_vcpu_run_nvhe((u32)arg1, (int)arg2);
 		set_host_regs(0, ret);
@@ -186,7 +173,26 @@ void handle_host_hvc(struct s2_host_regs *hr)
 #endif
 }
 
-void handle_host_hs_trap(struct kvm_cpu_context *host_context)
+void handle_host_hs_trap(struct kvm_cpu_context *hctxt)
 {
-	/* TODO */
+	unsigned long scause = csr_read(CSR_SCAUSE);
+	switch (scause) {
+	case EXC_SUPERVISOR_SYSCALL:
+	{
+		if (hctxt->a7 != SBI_EXT_HYPSEC_HVC) {
+			// passthrough to M mode
+			struct sbiret sr = sbi_ecall(hctxt->a7, hctxt->a6,
+				                     hctxt->a0, hctxt->a1, hctxt->a2,
+				                     hctxt->a3, hctxt->a4, hctxt->a5);
+			hctxt->a0 = sr.error;
+			hctxt->a1 = sr.value;
+		} else
+			handle_host_hvc(hctxt);
+		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
+		break;
+	}
+	default:
+		pr_info("Unknown scause: %ld\n", scause);
+	}
+	pr_alert("trap handled, going back to: %lx\n", csr_read(CSR_SEPC));
 }

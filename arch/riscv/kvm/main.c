@@ -14,6 +14,7 @@
 #include <asm/hwcap.h>
 #include <asm/sbi.h>
 #ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_virt.h>
 #include <asm/hypsec_host.h>
 #endif
 
@@ -29,11 +30,39 @@ int kvm_arch_check_processor_compat(void *opaque)
 }
 
 #ifdef CONFIG_VERIFIED_KVM
+static inline void enter_vs_mode(void)
+{
+	extern void __kvm_riscv_host_trap(void);
+
+	csr_write(CSR_VSSTATUS, csr_read(CSR_SSTATUS));
+	csr_write(CSR_VSIP, csr_read(CSR_SIP));
+	csr_write(CSR_VSIE, csr_read(CSR_SIE));
+	csr_write(CSR_VSTVEC, csr_read(CSR_STVEC));
+	csr_write(CSR_VSSCRATCH, csr_read(CSR_SSCRATCH));
+	csr_write(CSR_VSEPC, csr_read(CSR_SEPC));
+	csr_write(CSR_VSCAUSE, csr_read(CSR_SCAUSE));
+	csr_write(CSR_VSTVAL, csr_read(CSR_STVAL));
+	csr_write(CSR_VSATP, csr_read(CSR_SATP));
+
+	csr_write(CSR_HGATP, HGATP_MODE_OFF);
+	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
+	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
+	csr_write(CSR_HCOUNTEREN, -1UL);
+	csr_write(CSR_HVIP, 0);
+	csr_write(CSR_HIE, 0);
+	csr_write(CSR_HSTATUS, csr_read(CSR_HSTATUS) | HSTATUS_SPV);
+	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP);
+	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
+
+	__kvm_riscv_hfence_gvma_all();
+
+	__kvm_riscv_host_switch();
+}
+
 static void install_hs_runtime(void *discard)
 {
-	pr_alert("HERE1\n");
-	hvc_enable_s2_trans();
-	pr_alert("HERE2\n");
+	enter_vs_mode();
+	kvm_call_core(HVC_ENABLE_S2_TRANS);
 }
 #endif
 
@@ -99,7 +128,9 @@ int kvm_arch_init(void *opaque)
 		return -ENODEV;
 	}
 
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_riscv_stage2_mode_detect();
+#endif
 
 	kvm_riscv_stage2_vmid_detect();
 

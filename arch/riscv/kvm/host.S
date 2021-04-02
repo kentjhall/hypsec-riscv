@@ -7,8 +7,9 @@
 	.altmacro
 	.option norelax
 
-ENTRY(__kvm_riscv_host_switch)
-	/* Save Host GPRs (except sp and T0-T6) */
+ENTRY(__kvm_riscv_host_trap)
+	/* Save Host GPRs (except T0-T6) */
+	move t0, sp
 	addi sp, sp, -(KVM_CPU_CONTEXT_SIZE_ON_STACK)
 	REG_S	ra, (KVM_ARCH_HOST_RA)(sp)
 	REG_S	gp, (KVM_CPU_CONTEXT_GP)(sp)
@@ -33,16 +34,15 @@ ENTRY(__kvm_riscv_host_switch)
 	REG_S	s9, (KVM_CPU_CONTEXT_S9)(sp)
 	REG_S	s10, (KVM_CPU_CONTEXT_S10)(sp)
 	REG_S	s11, (KVM_CPU_CONTEXT_S11)(sp)
+	REG_S	t0, (KVM_ARCH_HOST_SP)(sp)
 
 	/* Handle the trap */
 	move a0, sp /* kvm_cpu_context */
 	la a1, handle_host_hs_trap
-	REG_L a1, (a1)
 	jr a1
 
-	/* Restore Host GPRs (except sp and T0-T6) */
+	/* Restore Host GPRs (except T0-T6) */
 	REG_L	ra, (KVM_CPU_CONTEXT_RA)(sp)
-	REG_L	sp, (KVM_CPU_CONTEXT_SP)(sp)
 	REG_L	gp, (KVM_CPU_CONTEXT_GP)(sp)
 	REG_L	tp, (KVM_CPU_CONTEXT_TP)(sp)
 	REG_L	s0, (KVM_CPU_CONTEXT_S0)(sp)
@@ -65,8 +65,23 @@ ENTRY(__kvm_riscv_host_switch)
 	REG_L	s9, (KVM_CPU_CONTEXT_S9)(sp)
 	REG_L	s10, (KVM_ARCH_HOST_S10)(sp)
 	REG_L	s11, (KVM_ARCH_HOST_S11)(sp)
-	addi sp, sp, (KVM_CPU_CONTEXT_SIZE_ON_STACK)
+	REG_L	sp, (KVM_CPU_CONTEXT_SP)(sp)
 
 	/* Return to VS mode */
 	sret
+ENDPROC(__kvm_riscv_host_trap)
+
+ENTRY(__kvm_riscv_host_switch)
+	/* Set SEPC to return path */
+	la	t4, __kvm_switch_return
+	csrw	CSR_SEPC, t4
+
+	/* Switch mode */
+	sret
+
+	/* We're back */
+	.align 2
+__kvm_switch_return:
+	/* Return to C code */
+	ret
 ENDPROC(__kvm_riscv_host_switch)

@@ -82,11 +82,16 @@
 #define EXC_STORE_GUEST_PAGE_FAULT	23
 
 #ifdef CONFIG_VERIFIED_KVM
-#define HEDELEG_HOST_FLAGS (-1UL)
-#define HIDELEG_HOST_FLAGS (-1UL)
-#define HEDELEG_GUEST_FLAGS (EXC_INST_MISALIGNED | EXC_BREAKPOINT |	\
-                             EXC_SYSCALL | EXC_INST_PAGE_FAULT		\
-                             EXC_LOAD_PAGE_FAULT | EXC_STORE_PAGE_FAULT)
+#define HEDELEG_HOST_FLAGS ((1UL << EXC_INST_MISALIGNED) | (1UL << EXC_INST_ACCESS) |	\
+                            (1UL << EXC_INST_ILLEGAL) | (1UL << EXC_BREAKPOINT) |	\
+			    (1UL << EXC_LOAD_ACCESS) | (1UL << EXC_STORE_ACCESS) |	\
+			    (1UL << EXC_SYSCALL) | (1UL << EXC_INST_PAGE_FAULT) |	\
+			    (1UL << EXC_LOAD_PAGE_FAULT) | (1UL << EXC_STORE_PAGE_FAULT))
+#define HIDELEG_HOST_FLAGS ((1UL << IRQ_VS_SOFT) | (1UL << IRQ_VS_TIMER) | \
+                            (1UL << IRQ_VS_EXT))
+#define HEDELEG_GUEST_FLAGS ((1UL << EXC_INST_MISALIGNED) | (1UL << EXC_BREAKPOINT) |	\
+                             (1UL << EXC_SYSCALL) | (1UL << EXC_INST_PAGE_FAULT) |	\
+                             (1UL << EXC_LOAD_PAGE_FAULT) | (1UL << EXC_STORE_PAGE_FAULT))
 #define HIDELEG_GUEST_FLAGS ((1UL << IRQ_VS_SOFT) | (1UL << IRQ_VS_TIMER) | \
                              (1UL << IRQ_VS_EXT))
 #endif

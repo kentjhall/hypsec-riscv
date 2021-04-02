@@ -488,7 +488,7 @@ void hs_boot_from_inc_exe(u32 vmid)
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
 	kvm_call_core(HVC_SAVE_CRYPT_VCPU,
-			vcpu->kvm->arch.vmid, vcpu->vcpu_id);
+			vcpu->kvm->arch.vmid.vmid, vcpu->vcpu_id);
 }
 
 void load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
@@ -509,7 +509,7 @@ void hs_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
 
 void hs_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	kvm_call_core(HVC_DECRYPT_BUF, vmid, buf, len);
+	kvm_call_core(HVC_DECRYPT_BUF, vmid, (uintptr_t)buf, len);
 }
 
 int hypsec_register_kvm(void)
