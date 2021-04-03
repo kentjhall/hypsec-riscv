@@ -60,7 +60,7 @@ void hvc_enable_s2_trans(void)
 	release_lock_core();
 }
 
-static void handle_host_hvc(struct kvm_cpu_context *hctxt)
+static void handle_host_hvc(struct kvm_cpu_context *hregs)
 {
 	u32 ret;
 	u64 callno, arg1, arg2, arg3, arg4, arg5, ret64;
@@ -70,15 +70,15 @@ static void handle_host_hvc(struct kvm_cpu_context *hctxt)
 #if 0 // TEMPORARY
 	set_per_cpu_host_regs((u64)hr);
 #endif
-	arg1 = hctxt->a1;
-	arg2 = hctxt->a2;
-	arg3 = hctxt->a3;
-	arg4 = hctxt->a4;
-	arg5 = hctxt->a5;
+	arg1 = hregs->a1;
+	arg2 = hregs->a2;
+	arg3 = hregs->a3;
+	arg4 = hregs->a4;
+	arg5 = hregs->a5;
 
 	ret = 0;
 	ret64 = 0;
-	callno = hctxt->a0;
+	callno = hregs->a0;
 
 	if (callno == HVC_ENABLE_S2_TRANS)
 	{
@@ -173,26 +173,50 @@ static void handle_host_hvc(struct kvm_cpu_context *hctxt)
 #endif
 }
 
-void handle_host_hs_trap(struct kvm_cpu_context *hctxt)
+#define INSN_LEN(insn) ((((insn) & 0x3) < 0x3) ? 2 : 4)
+
+#define INSN_MASK_WFI		0xffffff00
+#define INSN_MATCH_WFI		0x10500000
+
+void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 {
 	unsigned long scause = csr_read(CSR_SCAUSE);
+	pr_info("SEPC: %lx, SPV: %ld\n", csr_read(CSR_SEPC), csr_read(CSR_HSTATUS) & HSTATUS_SPV);
 	switch (scause) {
 	case EXC_SUPERVISOR_SYSCALL:
 	{
-		if (hctxt->a7 != SBI_EXT_HYPSEC_HVC) {
+		if (hregs->a7 != SBI_EXT_HYPSEC_HVC) {
 			// passthrough to M mode
-			struct sbiret sr = sbi_ecall(hctxt->a7, hctxt->a6,
-				                     hctxt->a0, hctxt->a1, hctxt->a2,
-				                     hctxt->a3, hctxt->a4, hctxt->a5);
-			hctxt->a0 = sr.error;
-			hctxt->a1 = sr.value;
+			struct sbiret sr = sbi_ecall(hregs->a7, hregs->a6,
+				                     hregs->a0, hregs->a1, hregs->a2,
+				                     hregs->a3, hregs->a4, hregs->a5);
+			hregs->a0 = sr.error;
+			hregs->a1 = sr.value;
 		} else
-			handle_host_hvc(hctxt);
+			handle_host_hvc(hregs);
 		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
 		break;
 	}
+	case EXC_INST_GUEST_PAGE_FAULT:
+	case EXC_LOAD_GUEST_PAGE_FAULT:
+	case EXC_STORE_GUEST_PAGE_FAULT:
+		pr_info("Stage 2 scause: %ld\n", scause);
+		break;
+	case EXC_VIRTUAL_INST_FAULT:
+		/* if ((csr_read(CSR_STVAL) & INSN_MASK_WFI) == INSN_MATCH_WFI) { */
+			/* pr_alert("hideleg: 0x%lx\n", csr_read(CSR_HIDELEG)); */
+			pr_alert("Host WFI, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP));
+			csr_write(CSR_HVIP, csr_read(CSR_SIP));
+			/* pr_alert("Host WFI after, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP)); */
+			/* csr_write(CSR_HVIP, csr_read(CSR_VSIP) << VSIP_TO_HVIP_SHIFT); */
+			/* pr_alert("Host WFI after, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP)); */
+			/* __asm__ __volatile__ ("wfi"); */
+		/* } else */
+		/* 	pr_info("Unknown virtual instruction fault: %ld\n", csr_read(CSR_STVAL)); */
+		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
+		break;
 	default:
 		pr_info("Unknown scause: %ld\n", scause);
 	}
-	pr_alert("trap handled, going back to: %lx\n", csr_read(CSR_SEPC));
+	pr_alert("trap handled; going back to: %lx, SPV: %ld\n", csr_read(CSR_SEPC), csr_read(CSR_HSTATUS) & HSTATUS_SPV);
 }

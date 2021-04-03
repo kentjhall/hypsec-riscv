@@ -49,9 +49,9 @@ static inline void enter_vs_mode(void)
 	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
 	csr_write(CSR_HCOUNTEREN, -1UL);
 	csr_write(CSR_HVIP, 0);
-	csr_write(CSR_HIE, 0);
-	csr_write(CSR_HSTATUS, csr_read(CSR_HSTATUS) | HSTATUS_SPV);
-	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP);
+	csr_write(CSR_HIE, HIDELEG_HOST_FLAGS);
+	csr_write(CSR_HSTATUS, HSTATUS_SPV | HSTATUS_SPVP);
+	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP | SR_SPIE);
 	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
 
 	__kvm_riscv_hfence_gvma_all();
