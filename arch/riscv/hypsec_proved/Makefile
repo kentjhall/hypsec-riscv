@@ -2,8 +2,8 @@
 # Makefile for host Kernel running with stage 2 translation
 #
 #obj-y += AbstractMachine.o
-#obj-y += MemBlock.o
-#obj-y += PageIndex.o
+obj-y += MemBlock.o
+obj-y += PageIndex.o
 #obj-y += PageMgmt.o
 #obj-y += PTAlloc.o
 #obj-y += PTWalk.o
@@ -35,4 +35,4 @@ obj-y += vs.o
 #obj-y += MmioSPTWalk.o
 #obj-y += MmioSPTOps.o
 obj-y += TrapDispatcher.o
-#obj-y += FaultHandler.o
+obj-y += FaultHandler.o

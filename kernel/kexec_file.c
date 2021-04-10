@@ -1316,7 +1316,11 @@ int crash_prepare_elf64_headers(struct crash_mem *mem, int kernel_map,
 		phdr->p_type = PT_LOAD;
 		phdr->p_flags = PF_R|PF_W|PF_X;
 		phdr->p_vaddr = (unsigned long) _text;
+#ifndef CONFIG_VERIFIED_KVM
 		phdr->p_filesz = phdr->p_memsz = _end - _text;
+#else
+		phdr->p_filesz = phdr->p_memsz = _hypsec_end - _text;
+#endif
 		phdr->p_offset = phdr->p_paddr = __pa_symbol(_text);
 		ehdr->e_phnum++;
 		phdr++;

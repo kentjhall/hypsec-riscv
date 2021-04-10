@@ -1,18 +1,11 @@
 #include <linux/types.h>
-#include <asm/kvm_asm.h>
-#include <asm/kvm_hyp.h>
 #include <linux/mman.h>
 #include <linux/kvm_host.h>
 #include <linux/io.h>
 #include <trace/events/kvm.h>
 #include <asm/pgalloc.h>
 #include <asm/cacheflush.h>
-#include <asm/kvm_arm.h>
-#include <asm/kvm_mmu.h>
-#include <asm/kvm_mmio.h>
-#include <asm/kvm_emulate.h>
-#include <asm/virt.h>
-#include <asm/kernel-pgtable.h>
+#include <asm/hypsec_pgtable.h>
 #include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
@@ -20,6 +13,7 @@
 
 #include "hypsec.h"
 
+#if 0 // TEMPORARY
 u32 handle_pvops(u32 vmid, u32 vcpuid)
 {
 	u32 ret;
@@ -52,20 +46,22 @@ u32 handle_pvops(u32 vmid, u32 vcpuid)
 
 	return check(ret);
 }
+#endif
 
-void handle_host_stage2_fault(unsigned long host_lr,
-					 struct s2_host_regs *host_regs)
+void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 {
 	u32 ret;
 	u64 addr;
 
-	addr = read_sysreg(hpfar_hs);
-	addr = (addr & HPFAR_MASK) * 256UL;
+	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
 	set_per_cpu_host_regs((u64)host_regs);
 
-	ret = emulate_mmio(addr, read_sysreg(esr_hs));
+	pr_alert("handle_host_stage2_fault: TODO");
+#if 0 // TEMPORARY
+	ret = emulate_mmio(addr, csr_read(CSR_HTINST));
 	if (ret == V_INVALID)
 	{
 		map_page_host(addr);
 	}
+#endif
 }

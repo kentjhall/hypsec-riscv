@@ -144,27 +144,6 @@ void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
 
-void set_per_cpu_host_regs(u64 hr)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	hs_data->per_cpu_data[pcpuid].host_regs = (struct s2_host_regs *)hr;
-};
-
-void set_host_regs(int nr, u64 value)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	hs_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
-};
-
-u64 get_host_regs(int nr)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	return hs_data->per_cpu_data[pcpuid].host_regs->regs[nr];
-};
-
 //MMIOOps
 u32 get_smmu_cfg_vmid(u32 cbndx, u32 num)
 {

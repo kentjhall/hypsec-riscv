@@ -30,38 +30,8 @@ int kvm_arch_check_processor_compat(void *opaque)
 }
 
 #ifdef CONFIG_VERIFIED_KVM
-static inline void enter_vs_mode(void)
-{
-	extern void __kvm_riscv_host_trap(void);
-
-	csr_write(CSR_VSSTATUS, csr_read(CSR_SSTATUS));
-	csr_write(CSR_VSIP, csr_read(CSR_SIP));
-	csr_write(CSR_VSIE, csr_read(CSR_SIE));
-	csr_write(CSR_VSTVEC, csr_read(CSR_STVEC));
-	csr_write(CSR_VSSCRATCH, csr_read(CSR_SSCRATCH));
-	csr_write(CSR_VSEPC, csr_read(CSR_SEPC));
-	csr_write(CSR_VSCAUSE, csr_read(CSR_SCAUSE));
-	csr_write(CSR_VSTVAL, csr_read(CSR_STVAL));
-	csr_write(CSR_VSATP, csr_read(CSR_SATP));
-
-	csr_write(CSR_HGATP, HGATP_MODE_OFF);
-	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
-	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
-	csr_write(CSR_HCOUNTEREN, -1UL);
-	csr_write(CSR_HVIP, 0);
-	csr_write(CSR_HIE, HIDELEG_HOST_FLAGS);
-	csr_write(CSR_HSTATUS, HSTATUS_SPV | HSTATUS_SPVP);
-	csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SR_SPP | SR_SPIE);
-	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
-
-	__kvm_riscv_hfence_gvma_all();
-
-	__kvm_riscv_host_switch();
-}
-
 static void install_hs_runtime(void *discard)
 {
-	enter_vs_mode();
 	kvm_call_core(HVC_ENABLE_S2_TRANS);
 }
 #endif
@@ -111,7 +81,9 @@ void kvm_arch_hardware_disable(void)
 
 int kvm_arch_init(void *opaque)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	const char *str;
+#endif
 
 	if (!riscv_isa_extension_available(NULL, h)) {
 		kvm_info("hypervisor extension not available\n");
@@ -130,7 +102,6 @@ int kvm_arch_init(void *opaque)
 
 #ifndef CONFIG_VERIFIED_KVM
 	kvm_riscv_stage2_mode_detect();
-#endif
 
 	kvm_riscv_stage2_vmid_detect();
 
@@ -152,8 +123,7 @@ int kvm_arch_init(void *opaque)
 	kvm_info("using %s G-stage page table format\n", str);
 
 	kvm_info("VMID %ld bits available\n", kvm_riscv_stage2_vmid_bits());
-
-#ifdef CONFIG_VERIFIED_KVM
+#else
 	init_hs_data_page();
 #endif
 
