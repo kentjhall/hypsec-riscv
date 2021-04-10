@@ -6,13 +6,17 @@
 
 u64 alloc_s2pt_pgd(u32 vmid)
 {
+	/* TODO: Is there a dealloc function? need to update that for 16 KiB PGD */
 	u64 next, end;
 
 	next = get_pgd_next(vmid);
 	end = pgd_pool_end(vmid);
 
-	if (next + PAGE_SIZE <= end)
+	/* Need 5 pages so that we can ensure we have a 16 KiB aligned PGD */
+	if (next + PAGE_SIZE * 5 <= end)
 	{
+		/* Align PGD to 16KiB boundary */
+		next = (next + PAGE_SIZE * 5) & ~(PAGE_SIZE * 4 - 1);
 		set_pgd_next(vmid, next + PAGE_SIZE);
 	}
 	else

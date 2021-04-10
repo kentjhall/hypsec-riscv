@@ -101,11 +101,44 @@
 */
 #define PSTATE_FAULT_BITS_64 11UL
 
+/* TODO (etm): This is extracted from arch/riscv/kvm/mmu.c
+ *  DRY this out
+ */
+#ifdef CONFIG_64BIT
+//static unsigned long stage2_mode = (HGATP_MODE_SV39X4 << HGATP_MODE_SHIFT);
+static unsigned long stage2_pgd_levels = 3;
+#define stage2_index_bits	9
+#else
+static unsigned long stage2_mode = (HGATP_MODE_SV32X4 << HGATP_MODE_SHIFT);
+static unsigned long stage2_pgd_levels = 2;
+#define stage2_index_bits	10
+#endif
+
+#define stage2_pgd_xbits	2
+#define stage2_pgd_size	(1UL << (HGATP_PAGE_SHIFT + stage2_pgd_xbits))
+#define stage2_gpa_bits	(HGATP_PAGE_SHIFT + \
+			 (stage2_pgd_levels * stage2_index_bits) + \
+			 stage2_pgd_xbits)
+#define stage2_gpa_size	((gpa_t)(1ULL << stage2_gpa_bits))
+
+static inline unsigned long stage2_pte_index(gpa_t addr, u32 level)
+{
+	unsigned long mask;
+	unsigned long shift = HGATP_PAGE_SHIFT + (stage2_index_bits * level);
+
+	if (level == (stage2_pgd_levels - 1))
+		mask = (PTRS_PER_PTE * (1UL << stage2_pgd_xbits)) - 1;
+	else
+		mask = PTRS_PER_PTE - 1;
+
+	return (addr >> shift) & mask;
+}
+
 // Micros
 
 #define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
-#define pgd_idx(addr)	stage2_pgd_index(addr)
+#define pgd_idx(addr)	stage2_pte_index(addr, stage2_pgd_levels - 1)
 #define pud_idx(addr)	pud_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)
 #define pte_idx(addr)	pte_index(addr)

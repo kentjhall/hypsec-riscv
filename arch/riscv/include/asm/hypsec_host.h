@@ -359,7 +359,7 @@ static void inline set_pt_hgatp(u32 vmid, u64 hgatp) {
 };
 
 void handle_host_stage2_fault(unsigned long host_lr,
-			      struct s2_host_regs *host_regs);
+			      struct kvm_cpu_context *host_regs);
 
 void __kvm_riscv_host_switch(void);
 #endif /* __RISCV_STAGE2_H__ */

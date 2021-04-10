@@ -5,12 +5,12 @@
  * PTWalk
  */
 
-u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
+u64 walk_pgd(u32 vmid, u64 hgatp, u64 addr, u32 alloc)
 {
-	u64 vttbr_pa, ret, pgd_idx, pgd, pgd_pa;
+	u64 hgatp_pa, ret, pgd_idx, pgd, pgd_pa;
 
 	ret = 0UL;
-	vttbr_pa = phys_page(vttbr);
+	hgatp_pa = phys_page(hgatp);
 
 	if (vmid == COREVISOR)
 	{
@@ -21,12 +21,14 @@ u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
 		pgd_idx = pgd_idx(addr);
 	}
 
-	pgd = pt_load(vmid, vttbr_pa | (pgd_idx * 8UL));
+	pgd = pt_load(vmid, hgatp_pa | (pgd_idx * 8UL));
 	if (pgd == 0UL && alloc == 1U)
 	{
 		pgd_pa = alloc_s2pt_pgd(vmid);
-		pgd = pgd_pa | PUD_TYPE_TABLE;
-		pt_store(vmid, vttbr_pa | (pgd_idx * 8UL), pgd);
+//		TODO (etm): What's up with PUD_TYPE_TABLE ?
+//		pgd = pgd_pa | PUD_TYPE_TABLE;
+		pgd = pgd_pa;
+		pt_store(vmid, hgatp_pa | (pgd_idx * 8UL), pgd);
 	}
 
 	ret = pgd;
@@ -47,7 +49,8 @@ u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc)
 		if (pud == 0UL && alloc == 1U)
 		{
 			pud_pa = alloc_s2pt_pud(vmid);
-			pud = pud_pa | PUD_TYPE_TABLE;
+//			pud = pud_pa | PUD_TYPE_TABLE;
+			pud = pud_pa;
 			pt_store(vmid, pgd_pa | (pud_idx * 8UL), pud);
 		}
 		ret = pud;
@@ -69,7 +72,8 @@ u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc)
 		if (pmd == 0UL && alloc == 1U)
 		{
 			pmd_pa = alloc_s2pt_pmd(vmid);
-			pmd = pmd_pa | PMD_TYPE_TABLE;
+//			pmd = pmd_pa | PMD_TYPE_TABLE;
+			pmd = pmd_pa;
 			pt_store(vmid, pud_pa | (pmd_idx * 8UL), pmd);
 		}
 		ret = pmd;
@@ -90,6 +94,10 @@ u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
 	}
 	return check64(ret);
 }
+
+/* TODO (etm): these bits are reserved by the ISA, but free for us to use */
+#define PMD_MARK 1UL << 55
+#define PTE_MARK 1UL << 56
 
 void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 {

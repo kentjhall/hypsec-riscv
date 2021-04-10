@@ -201,6 +201,7 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	case EXC_LOAD_GUEST_PAGE_FAULT:
 	case EXC_STORE_GUEST_PAGE_FAULT:
 		pr_info("Stage 2 scause: %ld\n", scause);
+		handle_host_stage2_fault(0, hregs);
 		break;
 	case EXC_VIRTUAL_INST_FAULT:
 		/* if ((csr_read(CSR_STVAL) & INSN_MASK_WFI) == INSN_MATCH_WFI) { */

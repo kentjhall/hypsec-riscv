@@ -15,32 +15,29 @@ void map_page_host(u64 addr)
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
-	//uncomment the following for m400
-	//if (!(addr >= 0x4000000000 && addr < 0x5000000000)) {
-	if (owner == INVALID_MEM)
+	/*
+	 * There's nothing special to do for device memory in RV64 so
+	 * we merge the INVALID_MEM (mmio hole), and guest shared mem
+	 * cases into one block.
+	 *
+	 * TODO: could count > 0 but page is only SPA merged, not shared?
+	 */
+	if (owner == INVALID_MEM || (owner == HOSTVISOR || count > 0U))
 	{
-		perm = pgprot_val(PAGE_S2_DEVICE);
-		perm |= S2_RDWR;
+		perm = pgprot_val(PAGE_KERNEL);
 		new_pte = (pfn * PAGE_SIZE) | perm;
+		/* VA_BITS config option must be set to 39 for 3 level paging */
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 	}
 	else
 	{
-		if (owner == HOSTVISOR || count > 0U)
-		{
-			perm = pgprot_val(PAGE_S2_KERNEL);
-			new_pte = (pfn * PAGE_SIZE) | perm;
-			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-		}
-		else
-		{
-			print_string("\rfaults on host\n");
-			v_panic();
-		}
+		/* Time to freak out */
+		print_string("\rfaults on host\n");
+		v_panic();
 	}
 	release_lock_s2page();
 }
-
+#if 0
 void clear_vm_page(u32 vmid, u64 pfn)
 {
 	u32 owner;
@@ -184,103 +181,110 @@ void revoke_vm_page(u32 vmid, u64 pfn)
 	}
 	release_lock_s2page();
 }
+#endif
 
 void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 {
-	u64 map;
-	u32 owner, count;
+	/* No IOMMU in RV64 */
 
-	acquire_lock_s2page();
-	owner = get_pfn_owner(pfn);
-	count = get_pfn_count(pfn);
-	map = get_pfn_map(pfn);
-
-	if (owner == HOSTVISOR)
-	{
-		if (count == 0)
-		{
-			clear_pfn_host(pfn);
-			set_pfn_owner(pfn, vmid);
-			set_pfn_map(pfn, gfn);
-			set_pfn_count(pfn, INVALID_MEM);
-		}
-		else {
-			print_string("\r\assign_to_smmu: host pfn count\n");
-			v_panic();
-		}
-	}
-	//TODO: LXP checks owner != vmid, why? this does not work 
-	else if (owner != INVALID_MEM)
-	{
-		print_string("\rvmid\n");
-		printhex_ul(vmid);
-		print_string("\rowner\n");
-		printhex_ul(owner);
-		print_string("\rpfn\n");
-		printhex_ul(pfn);
-		print_string("\rassign_to_smmu: owner unknown\n");
-		v_panic();
-	}
-	release_lock_s2page();
+//	u64 map;
+//	u32 owner, count;
+//
+//	acquire_lock_s2page();
+//	owner = get_pfn_owner(pfn);
+//	count = get_pfn_count(pfn);
+//	map = get_pfn_map(pfn);
+//
+//	if (owner == HOSTVISOR)
+//	{
+//		if (count == 0)
+//		{
+//			clear_pfn_host(pfn);
+//			set_pfn_owner(pfn, vmid);
+//			set_pfn_map(pfn, gfn);
+//			set_pfn_count(pfn, INVALID_MEM);
+//		}
+//		else {
+//			print_string("\r\assign_to_smmu: host pfn count\n");
+//			v_panic();
+//		}
+//	}
+//	//TODO: LXP checks owner != vmid, why? this does not work
+//	else if (owner != INVALID_MEM)
+//	{
+//		print_string("\rvmid\n");
+//		printhex_ul(vmid);
+//		print_string("\rowner\n");
+//		printhex_ul(owner);
+//		print_string("\rpfn\n");
+//		printhex_ul(pfn);
+//		print_string("\rassign_to_smmu: owner unknown\n");
+//		v_panic();
+//	}
+//	release_lock_s2page();
 }
 
 void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
-	u64 pfn, gfn;
-	u32 owner, count, map;
+	/* No IOMMU in RV64 */
 
-	acquire_lock_s2page();
-	pfn = phys_page(pte) / PAGE_SIZE;
-	gfn = iova / PAGE_SIZE;
-	owner = get_pfn_owner(pfn);
-	map = get_pfn_map(pfn);
-	//TODO: sync with LXP, we map the page in two cases
-	//1. if the pfn is a device IO (owner is INVALID) or 
-	//2. vmid == owner && gfn == map
-	if ((owner == INVALID_MEM) || (vmid == owner && gfn == map))
-	{
-		map_spt(cbndx, index, iova, pte);
-		if (owner == HOSTVISOR)
-		{
-			count = get_pfn_count(pfn);
-			if (count < HS_SMMU_CFG_SIZE)
-			{
-				set_pfn_count(pfn, count + 1U);
-			}
-		}
-	}
-	else
-	{
-		v_panic();
-		print_string("\rbug in update_smmu_page\n");
-		print_string("\rvmid\n");
-		printhex_ul(vmid);
-		print_string("\rowner\n");
-		printhex_ul(owner);
-		print_string("\rgfn\n");
-		printhex_ul(gfn);
-		print_string("\rmap\n");
-		printhex_ul(map);
-	}
-	release_lock_s2page();
+//	u64 pfn, gfn;
+//	u32 owner, count, map;
+//
+//	acquire_lock_s2page();
+//	pfn = phys_page(pte) / PAGE_SIZE;
+//	gfn = iova / PAGE_SIZE;
+//	owner = get_pfn_owner(pfn);
+//	map = get_pfn_map(pfn);
+//	//TODO: sync with LXP, we map the page in two cases
+//	//1. if the pfn is a device IO (owner is INVALID) or
+//	//2. vmid == owner && gfn == map
+//	if ((owner == INVALID_MEM) || (vmid == owner && gfn == map))
+//	{
+//		map_spt(cbndx, index, iova, pte);
+//		if (owner == HOSTVISOR)
+//		{
+//			count = get_pfn_count(pfn);
+//			if (count < HS_SMMU_CFG_SIZE)
+//			{
+//				set_pfn_count(pfn, count + 1U);
+//			}
+//		}
+//	}
+//	else
+//	{
+//		v_panic();
+//		print_string("\rbug in update_smmu_page\n");
+//		print_string("\rvmid\n");
+//		printhex_ul(vmid);
+//		print_string("\rowner\n");
+//		printhex_ul(owner);
+//		print_string("\rgfn\n");
+//		printhex_ul(gfn);
+//		print_string("\rmap\n");
+//		printhex_ul(map);
+//	}
+//	release_lock_s2page();
 }
 
 void unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
 {
-	u64 pte, pfn; 
-	u32 owner, count;
+	/* No IOMMU in RV64 */
 
-	acquire_lock_s2page();
-	pte = unmap_spt(cbndx, index, iova);
-	pfn = phys_page(pte) / PAGE_SIZE;
-	owner = get_pfn_owner(pfn);
-	if (owner == HOSTVISOR)
-	{
-		count = get_pfn_count(pfn);
-		if (count > 0U)
-		{
-			set_pfn_count(pfn, count - 1U);
-		}
-	}
-	release_lock_s2page();
+//	u64 pte, pfn;
+//	u32 owner, count;
+//
+//	acquire_lock_s2page();
+//	pte = unmap_spt(cbndx, index, iova);
+//	pfn = phys_page(pte) / PAGE_SIZE;
+//	owner = get_pfn_owner(pfn);
+//	if (owner == HOSTVISOR)
+//	{
+//		count = get_pfn_count(pfn);
+//		if (count > 0U)
+//		{
+//			set_pfn_count(pfn, count - 1U);
+//		}
+//	}
+//	release_lock_s2page();
 }
