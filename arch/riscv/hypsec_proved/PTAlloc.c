@@ -12,12 +12,12 @@ u64 alloc_s2pt_pgd(u32 vmid)
 	next = get_pgd_next(vmid);
 	end = pgd_pool_end(vmid);
 
-	/* Need 5 pages so that we can ensure we have a 16 KiB aligned PGD */
-	if (next + PAGE_SIZE * 5 <= end)
+	/* Need an extra 3 pages so that we can ensure we have a 16 KiB aligned PGD */
+	if (next + PAGE_SIZE * (4+3) <= end)
 	{
 		/* Align PGD to 16KiB boundary */
-		next = (next + PAGE_SIZE * 5) & ~(PAGE_SIZE * 4 - 1);
-		set_pgd_next(vmid, next + PAGE_SIZE);
+		next = (next + PAGE_SIZE * (4+3)) & ~(PAGE_SIZE * 4 - 1);
+		set_pgd_next(vmid, next);
 	}
 	else
 	{
