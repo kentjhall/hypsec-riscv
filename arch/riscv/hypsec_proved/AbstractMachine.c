@@ -2,20 +2,6 @@
 #include "hacl-20/Hacl_Ed25519.h"
 #include "hacl-20/Hacl_AES.h"
 
-void v_panic(void) {
-	//__hyp_panic();
-	u32 vmid = get_cur_vmid();
-	u32 vcpuid = get_cur_vcpu_id();
-	if (vmid) {
-		print_string("\rvm\n");
-		printhex_ul(get_shadow_ctxt(vmid, vcpuid, V_PC));
-	} else {
-		print_string("\rhost\n");
-		printhex_ul(read_sysreg(elr_hs));
-	}
-	printhex_ul(ESR_ELx_EC(read_sysreg(esr_hs)));
-}
-
 void clear_phys_mem(u64 pfn) {
     hs_memset((void *)kern_hyp_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 }
@@ -183,12 +169,6 @@ u32 get_iommu_num(void)
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	return hs_data->hs_iommu_num;
 }	
-
-u64 get_iommu_size(u32 num)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommus[num].size;
-}
 
 u32 get_iommu_num_context_banks(u32 num)
 {

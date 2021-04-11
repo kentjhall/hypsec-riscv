@@ -56,12 +56,12 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
 	set_per_cpu_host_regs((u64)host_regs);
 
-	pr_alert("handle_host_stage2_fault: TODO");
-#if 0 // TEMPORARY
 	ret = emulate_mmio(addr, csr_read(CSR_HTINST));
 	if (ret == V_INVALID)
 	{
+		pr_alert("handle_host_stage2_fault: TODO");
+#if 0 // TEMPORARY
 		map_page_host(addr);
-	}
 #endif
+	}
 }

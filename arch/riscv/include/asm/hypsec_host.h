@@ -104,7 +104,7 @@ struct hs_data {
 	arch_spinlock_t abs_lock;
 	arch_spinlock_t hs_pt_lock;
 	arch_spinlock_t console_lock;
-	arch_spinlock_t iommu_lock;
+	arch_spinlock_t plic_lock;
 	arch_spinlock_t spt_lock;
 
 	kvm_pfn_t ram_start_pfn;
@@ -119,9 +119,7 @@ struct hs_data {
 	int used_vm_info;
 	unsigned long last_remap_ptr;
 
-	struct hs_iommu_cfg iommu_cfg[HS_IOMMU_CFG_SIZE];
-	struct hs_riscv_iommu_device iommus[IOMMU_NUM];
-	int hs_iommu_num;
+	struct hs_riscv_plic_device plic;
 
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
@@ -136,10 +134,6 @@ struct hs_data {
 
 	uint8_t key[16];
 	uint8_t iv[16];
-
-	unsigned long iommu_page_pool_start;
-	unsigned long iommu_pgd_pool;
-	unsigned long iommu_pmd_pool;
 
 	u64 phys_mem_start;
 	u64 phys_mem_size;
@@ -195,7 +189,10 @@ static inline void hs_init_vgic_cpu_base(phys_addr_t base)
 	hs_data->vgic_cpu_base = base;
 }
 
-extern void __noreturn __hyp_panic(void);
+static inline void __noreturn __hyp_panic(void)
+{
+	panic("Hyp Panic");
+}
 
 extern void printhex_ul(unsigned long input);
 extern void print_string(char *input);

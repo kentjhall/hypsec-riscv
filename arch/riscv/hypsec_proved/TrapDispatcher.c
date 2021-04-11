@@ -188,11 +188,8 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 			csr_set(CSR_HVIP, (1UL << IRQ_S_SOFT) << VSIP_TO_HVIP_SHIFT);
 		}
 		else {
-			char *c;
-			for (c = "CANT HANDLE EXTERNAL INTERRUPTS; just gonna pend forever now..."; *c; ++c)
-				sbi_ecall(SBI_EXT_0_1_CONSOLE_PUTCHAR, 0, *c, 0, 0, 0, 0, 0);
-			sbi_ecall(SBI_EXT_0_1_CONSOLE_PUTCHAR, 0, '\n', 0, 0, 0, 0, 0);
-			csr_clear(CSR_SIE, 1UL << IRQ_S_EXT);
+			csr_clear(CSR_SIE, IE_EIE);
+			print_string("EXTERNAL INTERRUPT ALERT\n");
 		}
 
 		return;

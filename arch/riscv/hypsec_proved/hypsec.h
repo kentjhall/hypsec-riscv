@@ -31,7 +31,19 @@ static u64 inline check64(u64 val) {
 	return val;
 };
 
-void    v_panic(void);
+static void inline v_panic(void) {
+	//__hyp_panic();
+	u32 vmid = get_cur_vmid();
+	u32 vcpuid = get_cur_vcpu_id();
+	if (vmid) {
+		print_string("\rvm\n");
+		printhex_ul(get_shadow_ctxt(vmid, vcpuid, V_PC));
+	} else {
+		print_string("\rhost\n");
+		printhex_ul(csr_read(CSR_SEPC));
+	}
+	printhex_ul(csr_read(CSR_SCAUSE));
+}
 void    clear_phys_mem(u64 pfn);
 //u64     get_shared_kvm(u32 vmid);
 //u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
@@ -575,80 +587,31 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
 #define IOMMU_POOL_END  IOMMU_PAGES_SIZE
 
 #define IOMMU_PMD_BASE	(PAGE_SIZE * 256)
-static void inline acquire_lock_iommu(void) {
+static void inline acquire_lock_plic(void) {
 	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
-	stage2_spin_lock(&hs_data->iommu_lock);
+	stage2_spin_lock(&hs_data->plic_lock);
 };
-static void inline release_lock_iommu(void) {
+static void inline release_lock_plic(void) {
 	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
-	stage2_spin_unlock(&hs_data->iommu_lock);
+	stage2_spin_unlock(&hs_data->plic_lock);
 };
 
-static u64 inline get_iommu_pgd_next(void) {
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommu_pgd_pool;
-};
-
-static void inline set_iommu_pgd_next(u64 next) {
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	hs_data->iommu_pgd_pool = next;
-};
-
-static u64 inline iommu_pgd_end(void)
+static u64 inline get_plic_base(void)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u64 pool_start = hs_data->iommu_page_pool_start;
-	return pool_start + IOMMU_PMD_BASE;
-};
-
-static u64 inline get_iommu_pmd_next(void) {
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommu_pmd_pool;
-};
-
-static void inline set_iommu_pmd_next(u64 next) {
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	hs_data->iommu_pmd_pool = next;
-};
-
-static u64 inline iommu_pmd_end(void)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u64 pool_start = hs_data->iommu_page_pool_start;
-	return pool_start + IOMMU_POOL_END;
+	return hs_data->plic.phys_base;
 }
 
-static u64 inline iommu_pt_load(u64 addr) {
-	unsigned long *ptr = __hs_va(addr);
-	return (u64)*ptr;
-};
-
-static void inline iommu_pt_store(u64 addr, u64 value) {
-	unsigned long *ptr = __hs_va(addr);
-	*ptr = value;
-};
-
-extern void iommu_pt_clear(u32 cbndx, u32 num);
-
-u32 get_iommu_cfg_vmid(u32 cbndx, u32 num);
-void set_iommu_cfg_vmid(u32 cbndx, u32 num, u32 vmid);
-u64 get_iommu_cfg_hw_ttbr(u32 cbndx, u32 num);
-void set_iommu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr);
-u32 get_iommu_num_context_banks(u32 num);
-u32 get_iommu_pgshift(u32 num);
-u32 get_iommu_num(void);
-u64 get_iommu_size(u32 num);
-
-static u64 inline get_iommu_base(u32 num)
+static u64 inline get_plic_hyp_base(void)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommus[num].phys_base;
+	return hs_data->plic.hyp_base;
 }
 
-static u64 inline get_iommu_hyp_base(u32 num)
+static u64 inline get_plic_size(void)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommus[num].hyp_base;
+	return hs_data->plic.size;
 }
 
 static void inline set_per_cpu_host_regs(u64 hr)
@@ -715,8 +678,8 @@ static u64 inline get_tmp_buf(void) {
 u64 alloc_s2pt_pgd(u32 vmid);
 u64 alloc_s2pt_pud(u32 vmid);
 u64 alloc_s2pt_pmd(u32 vmid);
-//u64 alloc_iommu_pgd_page(void);
-//u64 alloc_iommu_pmd_page(void);
+//u64 alloc_plic_pgd_page(void);
+//u64 alloc_plic_pmd_page(void);
 
 /*
  * PTWalk
@@ -728,10 +691,10 @@ u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
 void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd);
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
-u64 walk_iommu_pgd(u64 ttbr, u64 addr, u32 alloc);
-u64 walk_iommu_pmd(u64 pgd, u64 addr, u32 alloc);
-u64 walk_iommu_pte(u64 pmd, u64 addr);
-void set_iommu_pte(u64 pmd, u64 addr, u64 pte);
+u64 walk_plic_pgd(u64 ttbr, u64 addr, u32 alloc);
+u64 walk_plic_pmd(u64 pgd, u64 addr, u32 alloc);
+u64 walk_plic_pte(u64 pmd, u64 addr);
+void set_plic_pte(u64 pmd, u64 addr, u64 pte);
 
 /*
  * NPTWalk
@@ -794,13 +757,13 @@ void set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 void map_page_host(u64 addr);
 void clear_vm_page(u32 vmid, u64 pfn);
 void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn);
-void assign_pfn_to_iommu(u32 vmid, u64 gfn, u64 pfn);
+void assign_pfn_to_plic(u32 vmid, u64 gfn, u64 pfn);
 void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level);
 void grant_vm_page(u32 vmid, u64 pfn);
 void revoke_vm_page(u32 vmid, u64 pfn);
 void clear_phys_page(unsigned long pfn);
-void update_iommu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
-void unmap_iommu_page(u32 cbndx, u32 index, u64 iova);
+void update_plic_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
+void unmap_plic_page(u32 cbndx, u32 index, u64 iova);
 
 /*
  * MemoryOps
@@ -841,10 +804,10 @@ u32 set_boot_info(u32 vmid, u64 load_addr, u64 size);
 void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx);
 void verify_and_load_images(u32 vmid);
 
-void alloc_iommu(u32 vmid, u32 cbndx, u32 index); 
-void assign_iommu(u32 vmid, u32 pfn, u32 gfn); 
-void map_iommu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
-void clear_iommu(u32 vmid, u32 cbndx, u32 index, u64 iova);
+void alloc_plic(u32 vmid, u32 cbndx, u32 index); 
+void assign_plic(u32 vmid, u32 pfn, u32 gfn); 
+void map_plic(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
+void clear_plic(u32 vmid, u32 cbndx, u32 index, u64 iova);
 void map_io(u32 vmid, u64 gpa, u64 pa);
 
 
@@ -877,41 +840,29 @@ void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 /*
  * MmioOps
  */
-u32 emulate_mmio(u64 addr, u32 hsr);
-void   __hs_free_iommu_pgd(u32 cbndx, u32 index);
-void   __hs_alloc_iommu_pgd(u32 cbndx, u32 vmid, u32 index);
-void  __hs_riscv_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
-u64 __hs_riscv_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
-void __hs_riscv_lpae_clear(u64 iova, u32 cbndx, u32 index);
-void iommu_assign_page(u32 cbndx, u32 index, u64 pfn, u64 gfn);
-void iommu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte);
-u64 hs_riscv_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
+u32 emulate_mmio(u64 addr, u32 htinst);
 
 /*
  * MmioOpsAux
  */
-void handle_host_mmio(u64 index, u32 hsr);
-u32 is_iommu_range(u64 addr);
+void handle_host_mmio(u32 htinst);
+u32 is_plic_range(u64 addr);
 
 /*
  * MmioCore
  */
-void mmap_iommu(u32 vmid, u64 ttbr, u64 addr, u64 pte);
-u64 walk_iommu(u32 vmid, u64 ttbr, u64 addr);
-void handle_iommu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index);
-void handle_iommu_read(u32 hsr, u64 fault_ipa, u32 len);
+void handle_plic_write(u64 fault_ipa, u32 len);
+void handle_plic_read(u64 fault_ipa, u32 len);
 
 /*
  * MmioCoreAux
  */
-u32 handle_iommu_global_access(u32 hsr, u64 offset, u32 iommu_index);
-u32 handle_iommu_cb_access(u64 offset);
-void __handle_iommu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val);
-void __handle_iommu_read(u32 hsr, u64 fault_ipa, u32 len);
+void __handle_plic_write(u64 fault_ipa, u32 len);
+void __handle_plic_read(u64 fault_ipa, u32 len);
 
-u64 host_get_mmio_data(u32 hsr);
-u64 iommu_init_pte(u64 prot, u64 paddr);
-u64 iommu_get_cbndx(u64 offset);
+u64 host_get_mmio_data(void);
+u64 plic_init_pte(u64 prot, u64 paddr);
+u64 plic_get_cbndx(u64 offset);
 
 /*
  * MemHandler
@@ -921,34 +872,12 @@ void hs_riscv_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
 void hs_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 /*
- * MmioPTAlloc
- */
-u64 alloc_iommu_pgd_page(void);
-u64 alloc_iommu_pmd_page(void);
-
-/*
  * MmioSPTOps
  */
 void init_spt(u32 cbndx, u32 index);
 u64 walk_spt(u32 cbndx, u32 index, u64 addr);
 void map_spt(u32 cbndx, u32 index, u64 addr, u64 pte);
 u64 unmap_spt(u32 cbndx, u32 index, u64 addr); 
-
-/*
- * MmioPTWalk
- */
-u64 walk_iommu_pgd(u64 ttbr, u64 addr, u32 alloc);
-u64 walk_iommu_pmd(u64 pgd, u64 addr, u32 alloc);
-u64 walk_iommu_pte(u64 pmd, u64 addr);
-void set_iommu_pte(u64 pmd, u64 addr, u64 pte);
-
-/*
- * MmioSPTWalk
- */
-void clear_iommu_pt(u32 cbndx, u32 index);
-u64 unmap_iommu_pt(u32 cbndx, u32 index, u64 addr);
-u64 walk_iommu_pt(u32 cbndx, u32 num, u64 addr);
-void set_iommu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
 
 /*
  * Management

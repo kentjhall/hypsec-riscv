@@ -135,7 +135,9 @@ SECTIONS
  * BSS section is too large.
  */
 #ifdef CONFIG_VERIFIED_KVM
-	. += SZ_16M;
+	// To avoid the DTB; how big this needs to be seems to depend
+	// on kernel config, so going with alot to be safe.
+	. += SZ_128M;
 
 	. = ALIGN(SECTION_ALIGN);
 	stage2_pgs_start = .;

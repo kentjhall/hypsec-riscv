@@ -18,6 +18,9 @@
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
 #include <asm/smp.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 /*
  * This driver implements a version of the RISC-V PLIC with the actual layout
@@ -280,11 +283,24 @@ static int __init plic_init(struct device_node *node,
 	u32 nr_irqs;
 	struct plic_priv *priv;
 	struct plic_handler *handler;
+#ifdef CONFIG_VERIFIED_KVM
+	struct resource res;
+	struct hs_data *hs_data;
+#endif
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
+#ifdef CONFIG_VERIFIED_KVM
+	if (WARN_ON(of_address_to_resource(node, 0, &res))) {
+		error = -EIO;
+		goto out_free_priv;
+	}
+	hs_data = (void *)hs_data_start;
+	hs_data->plic.phys_base = res.start;
+	hs_data->plic.size = resource_size(&res);
+#endif
 	priv->regs = of_iomap(node, 0);
 	if (WARN_ON(!priv->regs)) {
 		error = -EIO;

@@ -178,7 +178,7 @@ void init_hs_data_page(void)
 	hs_data->abs_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	hs_data->hs_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	hs_data->console_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	hs_data->iommu_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	hs_data->plic_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	hs_data->spt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	memset(&hs_data->arch, 0, sizeof(struct s2_cpu_arch));
@@ -242,10 +242,6 @@ void init_hs_data_page(void)
 	hs_data->vm_info[COREVISOR].used_pages = 0;
 	hs_data->vm_info[COREVISOR].shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
-	hs_data->iommu_page_pool_start = (u64)__pa(iommu_pgs_start);
-	hs_data->iommu_pgd_pool = hs_data->iommu_page_pool_start;
-	hs_data->iommu_pmd_pool = hs_data->iommu_page_pool_start + IOMMU_PMD_BASE;
-
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		hs_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
@@ -268,11 +264,6 @@ void init_hs_data_page(void)
 #endif
 	//test_aes(hs_data);
 
-	for (i = 0; i < HS_IOMMU_CFG_SIZE; i++) {
-		hs_data->iommu_cfg[i].hw_ttbr = host_alloc_stage2_page(2);
-		hs_data->iommu_cfg[i].vmid = V_INVALID;
-	}
-
 	memcpy(hs_data->key, key, 16);
 	memcpy(hs_data->iv, iv, 16);
 
@@ -283,7 +274,7 @@ void init_hypsec_io(void)
 {
 	int i = 0, err;
 	struct hs_data *hs_data;
-	struct hs_riscv_iommu_device *iommu;
+	struct hs_riscv_plic_device *plic;
 
 	hs_data = (void *)kvm_ksym_ref(hs_data_start);
 
@@ -306,14 +297,12 @@ void init_hypsec_io(void)
 		goto out_err;
 	}
 
-	for (i = 0; i < hs_data->hs_iommu_num; i++) {
-		iommu = &hs_data->iommus[i];
-		err = create_hypsec_io_mappings(iommu->phys_base, iommu->size,
-						&iommu->hyp_base);
-		if (err) {
-			kvm_err("Cannot map iommu %d from %llx\n", i, iommu->phys_base);
-			goto out_err;
-		}
+	plic = &hs_data->plic;
+	err = create_hypsec_io_mappings(plic->phys_base, plic->size,
+					&plic->hyp_base);
+	if (err) {
+		kvm_err("Cannot map plic %d from %llx\n", i, plic->phys_base);
+		goto out_err;
 	}
 
 out_err:
@@ -520,35 +509,4 @@ int hypsec_register_kvm(void)
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core(HVC_REGISTER_VCPU, vmid, vcpu_id);
-}
-
-/* DMA Protection */
-void hs_iommu_free_pgd(u32 cbndx, u32 num)
-{
-	kvm_call_core(HVC_IOMMU_FREE_PGD, cbndx, num);
-}
-
-void hs_iommu_alloc_pgd(u32 cbndx, u32 vmid, u32 num)
-{
-	kvm_call_core(HVC_IOMMU_ALLOC_PGD, cbndx, vmid, num);
-}
-
-void hs_riscv_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num)
-{
-	kvm_call_core(HVC_IOMMU_LPAE_MAP, iova, paddr, prot, cbndx, num);
-}
-
-phys_addr_t hs_riscv_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num)
-{
-	return kvm_call_core(HVC_IOMMU_LPAE_IOVA_TO_PHYS, iova, cbndx, num);
-}
-
-void hs_iommu_clear(u64 iova, u32 cbndx, u32 num)
-{
-	kvm_call_core(HVC_IOMMU_CLEAR, iova, cbndx, num);
-}
-
-void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
-{
-	kvm_call_core(HVC_PHYS_ADDR_IOREMAP, vmid, gpa, pa, size);
 }

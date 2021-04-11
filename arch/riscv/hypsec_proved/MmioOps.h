@@ -56,9 +56,8 @@ typedef u64 arm_lpae_iopte;
 
 #define SH_RD				7
 
-static inline u32 host_dabt_get_as(u32 hsr)
+static inline u32 host_dabt_get_as(u32 htinst)
 {
-	unsigned long htinst = hsr;
 	unsigned long insn;
 	int len = 0;
 
@@ -75,7 +74,7 @@ static inline u32 host_dabt_get_as(u32 hsr)
 		__hyp_panic();
 	}
 
-	/* Decode length of MMIO and shift */
+	/* Decode length of MMIO */
 	if ((insn & INSN_MASK_LW) == INSN_MATCH_LW) {
 		len = 4;
 	} else if ((insn & INSN_MASK_LB) == INSN_MATCH_LB) {
@@ -110,7 +109,7 @@ static inline u32 host_dabt_get_as(u32 hsr)
 	return len;
 }
 
-static inline bool host_dabt_is_write(u32 hsr)
+static inline bool host_dabt_is_write(void)
 {
 	return csr_read(CSR_SCAUSE) == EXC_STORE_GUEST_PAGE_FAULT;
 }
@@ -122,7 +121,7 @@ static inline u64 host_get_fault_ipa(phys_addr_t addr)
 	return (addr | (csr_read(CSR_STVAL) & 0x3));
 }
 
-static inline int host_dabt_get_rd(u32 hsr)
+static inline int host_dabt_get_rd(void)
 {
 	return SH_RD;
 }
