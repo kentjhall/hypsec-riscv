@@ -30,8 +30,37 @@ int kvm_arch_check_processor_compat(void *opaque)
 }
 
 #ifdef CONFIG_VERIFIED_KVM
+static inline void enter_vs_mode(void)
+{
+	extern void __kvm_riscv_host_trap(void);
+
+	csr_write(CSR_VSSTATUS, csr_read(CSR_SSTATUS));
+	csr_write(CSR_HIE, csr_read(CSR_SIE) << VSIP_TO_HVIP_SHIFT);
+	csr_write(CSR_HVIP, csr_read(CSR_SIP) << VSIP_TO_HVIP_SHIFT);
+	csr_write(CSR_VSTVEC, csr_read(CSR_STVEC));
+	csr_write(CSR_VSSCRATCH, csr_read(CSR_SSCRATCH));
+	csr_write(CSR_VSEPC, csr_read(CSR_SEPC));
+	csr_write(CSR_VSCAUSE, csr_read(CSR_SCAUSE));
+	csr_write(CSR_VSTVAL, csr_read(CSR_STVAL));
+	csr_write(CSR_VSATP, csr_read(CSR_SATP));
+
+	csr_write(CSR_HGATP, HGATP_MODE_OFF);
+	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
+	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
+	csr_write(CSR_HCOUNTEREN, -1UL);
+	csr_set(CSR_HSTATUS, HSTATUS_SPV);
+	csr_set(CSR_SSTATUS, SR_SPP | SR_SPIE | SR_FS_INITIAL);
+	csr_write(CSR_SIE, -1UL);
+	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
+
+	__kvm_riscv_hfence_gvma_all();
+
+	__kvm_riscv_host_switch();
+}
+
 static void install_hs_runtime(void *discard)
 {
+	enter_vs_mode();
 	kvm_call_core(HVC_ENABLE_S2_TRANS);
 }
 #endif
