@@ -32,8 +32,7 @@ void map_page_host(u64 addr)
 	else
 	{
 		/* Time to freak out */
-		print_string("\rfaults on host\n");
-		v_panic();
+		panic("\rfaults on host\n");
 	}
 	release_lock_s2page();
 }

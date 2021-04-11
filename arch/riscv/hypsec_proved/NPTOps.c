@@ -42,7 +42,7 @@ void clear_pfn_host(u64 pfn)
 	{
 		//TODO: why don't we set pte to 0?
 		set_npt(HOSTVISOR, pfn * PAGE_SIZE, 3U, 0);
-		kvm_tlb_flush_vmid_ipa_host(pfn * PAGE_SIZE);
+		__kvm_riscv_hfence_gvma_all();
         }
 
 	release_lock_pt(HOSTVISOR);

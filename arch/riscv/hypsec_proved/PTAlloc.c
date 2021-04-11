@@ -45,9 +45,7 @@ u64 alloc_s2pt_pgd(u32 vmid)
 	}
 	else
 	{
-		print_string("\rwe used all s2 pgd pages\n");
-		printhex_ul(vmid);
-		v_panic();
+		panic("\rwe used all s2 pgd pages: 0x%x\n", vmid);
 	}
 
 	return check64(next);
@@ -92,9 +90,7 @@ u64 alloc_s2pt_pmd(u32 vmid)
 	}
 	else
 	{
-		print_string("\rwe used all s2 pmd pages\n");
-		printhex_ul(vmid);
-		v_panic();
+		panic("\rwe used all s2 pmd pages: 0x%x\n", vmid);
 	}
 
 	return next;

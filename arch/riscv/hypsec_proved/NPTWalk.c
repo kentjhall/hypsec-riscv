@@ -106,8 +106,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 		//TODO: Xupeng, why we don't check this in the verified code
 		if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
 		{
-			print_string("\rset existing npt: pmd\n");
-			v_panic();
+			panic("\rset existing npt: pmd\n");
 		}
 		else
 		{
@@ -123,8 +122,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 		}
 		else
 		{
-			print_string("\rset existing npt: pte\n");
-			v_panic();
+			panic("\rset existing npt: pte\n");
 		}
 	}
 }
