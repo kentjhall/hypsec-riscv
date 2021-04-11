@@ -137,7 +137,8 @@ SECTIONS
 #ifdef CONFIG_VERIFIED_KVM
 	. += SZ_16M;
 
-	. = ALIGN(SECTION_ALIGN);
+	/* 16KiB align for hgatp first level of Stage-2 page tables */
+	. = ALIGN(0x4000);
 	stage2_pgs_start = .;
 	. += STAGE2_PAGES_SIZE;
 	stage2_pgs_end = .;

@@ -209,6 +209,14 @@ void init_hs_data_page(void)
 
 		vmid64 = (u64)i;
 		vmid64 = (vmid64 << HGATP_VMID_SHIFT) & HGATP_VMID_MASK;
+
+		/* TODO: Remove debug check */
+		hgatp = hs_data->vm_info[i].page_pool_start;
+		if (hgatp != _ALIGN(hgatp, 0x4000)) {
+			/* hgatp must be 16KiB aligned */
+			BUG();
+		}
+
 		hgatp = (hs_data->vm_info[i].page_pool_start >> PAGE_SHIFT) & HGATP_PPN;
 		hs_data->vm_info[i].hgatp = (hgatp | vmid64 | stage2_mode);
 
@@ -223,6 +231,13 @@ void init_hs_data_page(void)
 		hs_data->vm_info[HOSTVISOR].page_pool_start + HOST_PUD_BASE;
 	hs_data->vm_info[HOSTVISOR].pmd_pool =
 		hs_data->vm_info[HOSTVISOR].page_pool_start + HOST_PMD_BASE;
+
+	/* TODO: Remove debug check */
+	hgatp = hs_data->vm_info[HOSTVISOR].page_pool_start;
+	if (hgatp != _ALIGN(hgatp, 0x4000)) {
+		/* hgatp must be 16KiB aligned */
+		BUG();
+	}
 
 	hs_data->host_hgatp = (hs_data->vm_info[HOSTVISOR].page_pool_start >> PAGE_SHIFT) & HGATP_PPN;
 	hs_data->host_hgatp |= stage2_mode;
