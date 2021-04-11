@@ -49,7 +49,7 @@ void hvc_enable_s2_trans(void)
 		hs_data->installed = true;
 	}
 
-	csr_write(CSR_HGATP, hs_data->host_hgatp);
+	/* csr_write(CSR_HGATP, hs_data->host_hgatp); */
 	__kvm_riscv_hfence_gvma_all();
 
 	release_lock_core();
@@ -179,10 +179,14 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	if (scause & CAUSE_IRQ_FLAG) {
 		unsigned long cause = scause & ~CAUSE_IRQ_FLAG;
 
-		if (cause == IRQ_S_TIMER)
+		if (cause == IRQ_S_TIMER) {
 			csr_clear(CSR_SIE, IE_TIE);
-		else if (cause == IRQ_S_SOFT)
+			csr_set(CSR_HVIP, (1UL << IRQ_S_TIMER) << VSIP_TO_HVIP_SHIFT);
+		}
+		else if (cause == IRQ_S_SOFT) {
 			csr_clear(CSR_SIP, 1UL << IRQ_S_SOFT);
+			csr_set(CSR_HVIP, (1UL << IRQ_S_SOFT) << VSIP_TO_HVIP_SHIFT);
+		}
 		else {
 			char *c;
 			for (c = "CANT HANDLE EXTERNAL INTERRUPTS; just gonna pend forever now..."; *c; ++c)
@@ -191,7 +195,6 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 			csr_clear(CSR_SIE, 1UL << IRQ_S_EXT);
 		}
 
-		csr_set(CSR_HVIP, (1UL << cause) << VSIP_TO_HVIP_SHIFT);
 		return;
 	}
 
