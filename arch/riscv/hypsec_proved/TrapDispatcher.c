@@ -49,7 +49,7 @@ void hvc_enable_s2_trans(void)
 		hs_data->installed = true;
 	}
 
-	/* csr_write(CSR_HGATP, hs_data->host_hgatp); */
+	csr_write(CSR_HGATP, hs_data->host_hgatp);
 	__kvm_riscv_hfence_gvma_all();
 
 	release_lock_core();
