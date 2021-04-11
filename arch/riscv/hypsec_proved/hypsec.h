@@ -651,9 +651,26 @@ static u64 inline get_smmu_hyp_base(u32 num)
 	return hs_data->smmus[num].hyp_base;
 }
 
-void set_per_cpu_host_regs(u64 hr); 
-void set_host_regs(int nr, u64 value);
-u64 get_host_regs(int nr);
+static void inline set_per_cpu_host_regs(u64 hr)
+{
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	int pcpuid = smp_processor_id();
+	hs_data->per_cpu_data[pcpuid].host_regs = (struct s2_host_regs *)hr;
+};
+
+static void inline set_host_regs(int nr, u64 value)
+{
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	int pcpuid = smp_processor_id();
+	hs_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
+};
+
+static u64 inline get_host_regs(int nr)
+{
+	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	int pcpuid = smp_processor_id();
+	return hs_data->per_cpu_data[pcpuid].host_regs->regs[nr];
+};
 
 static u64 inline get_phys_mem_size(void)
 {

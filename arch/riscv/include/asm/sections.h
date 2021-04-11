@@ -22,6 +22,7 @@ extern char stage2_tmp_pgs_start[];
 extern char stage2_tmp_pgs_end[];
 extern char smmu_pgs_start[];
 extern char smmu_pgs_end[];
+extern char _hypsec_end[];
 #endif
 
 #endif /* __ASM_SECTIONS_H */

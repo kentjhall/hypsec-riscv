@@ -7,6 +7,7 @@
 	.altmacro
 	.option norelax
 
+	.align 2
 ENTRY(__kvm_riscv_host_trap)
 	/* Save Host GPRs (except T0-T6) */
 	addi sp, sp, -(KVM_CPU_CONTEXT_SIZE_ON_STACK)
@@ -77,7 +78,6 @@ ENTRY(__kvm_riscv_host_switch)
 	sret
 
 	/* We're back */
-	.align 2
 __kvm_switch_return:
 	/* Return to C code */
 	ret

@@ -42,7 +42,11 @@ __efistub___memset		= memset;
 
 __efistub__start		= _start;
 __efistub__start_kernel		= _start_kernel;
+#ifndef CONFIG_VERIFIED_KVM
 __efistub__end			= _end;
+#else
+__efistub__end			= _hypsec_end;
+#endif
 __efistub__edata		= _edata;
 __efistub_screen_info		= screen_info;
 

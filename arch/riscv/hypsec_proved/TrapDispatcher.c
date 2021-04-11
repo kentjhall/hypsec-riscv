@@ -7,7 +7,6 @@
 #include <asm/cacheflush.h>
 #include <asm/hypsec_virt.h>
 #include <asm/hypsec_pgtable.h>
-#include <asm/hypsec_asm.h>
 #include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
@@ -25,7 +24,6 @@
  */
 static void protect_hs_mem(void)
 {
-#if 0
 	unsigned long addr, end, index;
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 
@@ -37,7 +35,6 @@ static void protect_hs_mem(void)
 		set_s2_page_vmid(index, COREVISOR);
 		addr += PAGE_SIZE;
 	} while (addr < end);
-#endif
 }
 
 void hvc_enable_s2_trans(void)
@@ -52,33 +49,29 @@ void hvc_enable_s2_trans(void)
 		hs_data->installed = true;
 	}
 
-#if 0 // TEMPORARY
 	csr_write(CSR_HGATP, hs_data->host_hgatp);
-#endif
-	__kvm_flush_vm_context();
+	__kvm_riscv_hfence_gvma_all();
 
 	release_lock_core();
 }
 
-static void handle_host_hvc(struct kvm_cpu_context *hregs)
+static void handle_host_hvc(struct kvm_cpu_context *hr)
 {
 	u32 ret;
 	u64 callno, arg1, arg2, arg3, arg4, arg5, ret64;
 
 	//vmid = get_cur_vmid();
 	//vcpuid = get_cur_vcpuid();
-#if 0 // TEMPORARY
 	set_per_cpu_host_regs((u64)hr);
-#endif
-	arg1 = hregs->a1;
-	arg2 = hregs->a2;
-	arg3 = hregs->a3;
-	arg4 = hregs->a4;
-	arg5 = hregs->a5;
+	arg1 = hr->a1;
+	arg2 = hr->a2;
+	arg3 = hr->a3;
+	arg4 = hr->a4;
+	arg5 = hr->a5;
 
 	ret = 0;
 	ret64 = 0;
-	callno = hregs->a0;
+	callno = hr->a0;
 
 	if (callno == HVC_ENABLE_S2_TRANS)
 	{
@@ -173,51 +166,75 @@ static void handle_host_hvc(struct kvm_cpu_context *hregs)
 #endif
 }
 
-#define INSN_LEN(insn) ((((insn) & 0x3) < 0x3) ? 2 : 4)
-
-#define INSN_MASK_WFI		0xffffff00
-#define INSN_MATCH_WFI		0x10500000
-
 void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 {
 	unsigned long scause = csr_read(CSR_SCAUSE);
-	pr_info("SEPC: %lx, SPV: %ld\n", csr_read(CSR_SEPC), csr_read(CSR_HSTATUS) & HSTATUS_SPV);
+	unsigned long vsatp = csr_read(CSR_VSATP);
+
+	if (csr_read(CSR_SATP) != vsatp) {
+		csr_write(CSR_SATP, vsatp);
+		local_flush_tlb_all();
+	}
+
+	if (scause & CAUSE_IRQ_FLAG) {
+		unsigned long cause = scause & ~CAUSE_IRQ_FLAG;
+
+		if (cause == IRQ_S_TIMER) {
+			csr_clear(CSR_SIE, IE_TIE);
+			csr_set(CSR_HVIP, (1UL << IRQ_S_TIMER) << VSIP_TO_HVIP_SHIFT);
+		}
+		else if (cause == IRQ_S_SOFT) {
+			csr_clear(CSR_SIP, 1UL << IRQ_S_SOFT);
+			csr_set(CSR_HVIP, (1UL << IRQ_S_SOFT) << VSIP_TO_HVIP_SHIFT);
+		}
+		else {
+			char *c;
+			for (c = "CANT HANDLE EXTERNAL INTERRUPTS; just gonna pend forever now..."; *c; ++c)
+				sbi_ecall(SBI_EXT_0_1_CONSOLE_PUTCHAR, 0, *c, 0, 0, 0, 0, 0);
+			sbi_ecall(SBI_EXT_0_1_CONSOLE_PUTCHAR, 0, '\n', 0, 0, 0, 0, 0);
+			csr_clear(CSR_SIE, 1UL << IRQ_S_EXT);
+		}
+
+		return;
+	}
+
 	switch (scause) {
 	case EXC_SUPERVISOR_SYSCALL:
 	{
 		if (hregs->a7 != SBI_EXT_HYPSEC_HVC) {
 			// passthrough to M mode
-			struct sbiret sr = sbi_ecall(hregs->a7, hregs->a6,
-				                     hregs->a0, hregs->a1, hregs->a2,
-				                     hregs->a3, hregs->a4, hregs->a5);
+			struct sbiret sr;
+			if (hregs->a7 == SBI_EXT_RFENCE) {
+				if (hregs->a6 == SBI_EXT_RFENCE_REMOTE_SFENCE_VMA)
+					hregs->a6 = SBI_EXT_RFENCE_REMOTE_HFENCE_VVMA;
+				else if (hregs->a6 == SBI_EXT_RFENCE_REMOTE_SFENCE_VMA_ASID)
+					hregs->a6 = SBI_EXT_RFENCE_REMOTE_HFENCE_VVMA_ASID;
+			}
+			else if (hregs->a7 == SBI_EXT_TIME) {
+				csr_clear(CSR_HVIP, 1UL << IRQ_VS_TIMER);
+				csr_set(CSR_SIE, IE_TIE);
+			}
+			sr = sbi_ecall(hregs->a7, hregs->a6,
+				       hregs->a0, hregs->a1, hregs->a2,
+				       hregs->a3, hregs->a4, hregs->a5);
 			hregs->a0 = sr.error;
 			hregs->a1 = sr.value;
 		} else
 			handle_host_hvc(hregs);
+
 		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
 		break;
 	}
 	case EXC_INST_GUEST_PAGE_FAULT:
 	case EXC_LOAD_GUEST_PAGE_FAULT:
 	case EXC_STORE_GUEST_PAGE_FAULT:
-		pr_info("Stage 2 scause: %ld\n", scause);
-		handle_host_stage2_fault(0, hregs);
+		handle_host_stage2_fault((struct s2_host_regs *)hregs);
 		break;
 	case EXC_VIRTUAL_INST_FAULT:
-		/* if ((csr_read(CSR_STVAL) & INSN_MASK_WFI) == INSN_MATCH_WFI) { */
-			/* pr_alert("hideleg: 0x%lx\n", csr_read(CSR_HIDELEG)); */
-			pr_alert("Host WFI, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP));
-			csr_write(CSR_HVIP, csr_read(CSR_SIP));
-			/* pr_alert("Host WFI after, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP)); */
-			/* csr_write(CSR_HVIP, csr_read(CSR_VSIP) << VSIP_TO_HVIP_SHIFT); */
-			/* pr_alert("Host WFI after, pending HVIP: 0x%lx, VSIP: 0x%lx, SIP: 0x%lx\n", csr_read(CSR_HVIP), csr_read(CSR_VSIP), csr_read(CSR_SIP)); */
-			/* __asm__ __volatile__ ("wfi"); */
-		/* } else */
-		/* 	pr_info("Unknown virtual instruction fault: %ld\n", csr_read(CSR_STVAL)); */
 		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
 		break;
 	default:
-		pr_info("Unknown scause: %ld\n", scause);
+		pr_info("Unknown scause: %ld, hedeleg: %lx, spv: %lx, spp: %lx, sepc: %lx\n", scause, csr_read(CSR_HEDELEG), csr_read(CSR_HSTATUS) & HSTATUS_SPV, csr_read(CSR_SSTATUS) & SR_SPP, csr_read(CSR_SEPC));
+		break;
 	}
-	pr_alert("trap handled; going back to: %lx, SPV: %ld\n", csr_read(CSR_SEPC), csr_read(CSR_HSTATUS) & HSTATUS_SPV);
 }

@@ -48,7 +48,11 @@ ENTRY(_start)
 #endif
 #endif
 	/* Effective size of kernel image */
+#ifndef CONFIG_VERIFIED_KVM
 	.dword _end - _start
+#else
+	.dword _hypsec_end - _start
+#endif
 	.dword __HEAD_FLAGS
 	.word RISCV_HEADER_VERSION
 	.word 0

@@ -130,11 +130,13 @@ SECTIONS
 	_end = .;
 
 /*
- * NOTE: this is sketchy; putting after _end is probably wrong,
- * but it's the only way it boots (it seems moving _end too far
- * forward messes things up for some reason), so we'll see.
+ * NOTE: This unfortunately needs to be after _end because there seems
+ * to be some loading issue (likely a QEMU bug?) when the kernel image
+ * BSS section is too large.
  */
 #ifdef CONFIG_VERIFIED_KVM
+	. += SZ_16M;
+
 	. = ALIGN(SECTION_ALIGN);
 	stage2_pgs_start = .;
 	. += STAGE2_PAGES_SIZE;
@@ -157,6 +159,9 @@ SECTIONS
 	shared_data_start = .;
 	. += PAGE_SIZE * (PAGE_SIZE * 4);
 	shared_data_end = .;
+
+	_hypsec_end = .;
+
 #endif
 
 	STABS_DEBUG
