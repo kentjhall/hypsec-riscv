@@ -104,7 +104,7 @@ struct hs_data {
 	arch_spinlock_t abs_lock;
 	arch_spinlock_t hs_pt_lock;
 	arch_spinlock_t console_lock;
-	arch_spinlock_t smmu_lock;
+	arch_spinlock_t iommu_lock;
 	arch_spinlock_t spt_lock;
 
 	kvm_pfn_t ram_start_pfn;
@@ -119,9 +119,9 @@ struct hs_data {
 	int used_vm_info;
 	unsigned long last_remap_ptr;
 
-	struct hs_smmu_cfg smmu_cfg[HS_SMMU_CFG_SIZE];
-	struct hs_arm_smmu_device smmus[SMMU_NUM];
-	int hs_smmu_num;
+	struct hs_iommu_cfg iommu_cfg[HS_IOMMU_CFG_SIZE];
+	struct hs_riscv_iommu_device iommus[IOMMU_NUM];
+	int hs_iommu_num;
 
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
@@ -137,9 +137,9 @@ struct hs_data {
 	uint8_t key[16];
 	uint8_t iv[16];
 
-	unsigned long smmu_page_pool_start;
-	unsigned long smmu_pgd_pool;
-	unsigned long smmu_pmd_pool;
+	unsigned long iommu_page_pool_start;
+	unsigned long iommu_pgd_pool;
+	unsigned long iommu_pmd_pool;
 
 	u64 phys_mem_start;
 	u64 phys_mem_size;
@@ -208,11 +208,11 @@ int hs_memcmp(void *dest, void *src, size_t len);
 int hs_hex_to_bin(char ch);
 int hs_hex2bin(unsigned char *dst, const char *src, int count);
 
-extern void hs_smmu_alloc_pgd(u32 cbndx, u32 vmid, u32 num);
-extern void hs_smmu_free_pgd(u32 cbndx, u32 num);
-extern void hs_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
-extern phys_addr_t hs_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
-extern void hs_smmu_clear(u64 iova, u32 cbndx, u32 num);
+extern void hs_iommu_alloc_pgd(u32 cbndx, u32 vmid, u32 num);
+extern void hs_iommu_free_pgd(u32 cbndx, u32 num);
+extern void hs_riscv_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
+extern phys_addr_t hs_riscv_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
+extern void hs_iommu_clear(u64 iova, u32 cbndx, u32 num);
 extern void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 extern void hs_boot_from_inc_exe(u32 vmid);

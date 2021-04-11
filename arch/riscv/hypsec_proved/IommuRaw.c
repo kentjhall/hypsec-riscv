@@ -10,7 +10,7 @@ u64 host_get_mmio_data(u32 hsr)
 }
 
 //TODO: Xupeng why is this so simplified?
-u64 smmu_init_pte(u64 prot, u64 paddr)
+u64 iommu_init_pte(u64 prot, u64 paddr)
 {
 	u64 val;
 
@@ -25,10 +25,10 @@ u64 smmu_init_pte(u64 prot, u64 paddr)
 }
 
 //TODO: FIXME: return u32..
-u64 smmu_get_cbndx(u64 offset)
+u64 iommu_get_cbndx(u64 offset)
 {
 	u64 cbndx = 0;
-	offset -= ARM_SMMU_GLOBAL_BASE;
-	cbndx = offset >> ARM_SMMU_PGSHIFT;
+	offset -= ARM_IOMMU_GLOBAL_BASE;
+	cbndx = offset >> ARM_IOMMU_PGSHIFT;
 	return cbndx;
 }

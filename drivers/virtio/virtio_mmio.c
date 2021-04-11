@@ -69,6 +69,9 @@
 #include <uapi/linux/virtio_mmio.h>
 #include <linux/virtio_ring.h>
 
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 
 /* The alignment to use between consumer and producer parts of vring.
@@ -90,6 +93,11 @@ struct virtio_mmio_device {
 	/* a list of queues so we can dispatch IRQs */
 	spinlock_t lock;
 	struct list_head virtqueues;
+
+#ifdef CONFIG_VERIFIED_KVM
+        u64                             phys_base;
+        u32                             index;
+#endif
 };
 
 struct virtio_mmio_vq_info {
@@ -557,11 +565,47 @@ static void virtio_mmio_release_dev(struct device *_d)
 
 /* Platform device */
 
+#ifdef CONFIG_VERIFIED_KVM
+static void s2_iommu_probe(struct virtio_mmio_device *vm_dev,
+			  u64 base, u64 size)
+{
+	struct hs_data *hs_data;
+	struct hs_riscv_iommu_device hs_iommu;
+	u64 iommu_start, iommu_end;
+
+	hs_data = (void *)kvm_ksym_ref(hs_data_start);
+	if (hs_data->hs_iommu_num > IOMMU_NUM)
+		return;
+
+	hs_iommu.phys_base = base;
+	hs_iommu.size = size;
+
+	iommu_start = base;
+	iommu_end = base + size;
+
+	hs_iommu.features = vm_dev->vdev.features;
+
+	// Don't think we have "context banks", so just say there's 1
+	hs_iommu.num_context_banks = 1;
+	hs_iommu.num_s2_context_banks = 1;
+
+	vm_dev->index = hs_data->hs_iommu_num;
+	hs_iommu.index = vm_dev->index;
+
+	hs_data->iommus[hs_data->hs_iommu_num] = hs_iommu;
+	hs_data->hs_iommu_num++;
+}
+#endif
+
 static int virtio_mmio_probe(struct platform_device *pdev)
 {
 	struct virtio_mmio_device *vm_dev;
 	unsigned long magic;
 	int rc;
+#ifdef CONFIG_VERIFIED_KVM
+	struct resource *res;
+	u64 phys_iommu_base, iommu_size;
+#endif
 
 	vm_dev = devm_kzalloc(&pdev->dev, sizeof(*vm_dev), GFP_KERNEL);
 	if (!vm_dev)
@@ -577,6 +621,12 @@ static int virtio_mmio_probe(struct platform_device *pdev)
 	vm_dev->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(vm_dev->base))
 		return PTR_ERR(vm_dev->base);
+
+#ifdef CONFIG_VERIFIED_KVM
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	phys_iommu_base = res->start;
+	iommu_size = resource_size(res);
+#endif
 
 	/* Check magic value */
 	magic = readl(vm_dev->base + VIRTIO_MMIO_MAGIC_VALUE);
@@ -627,6 +677,11 @@ static int virtio_mmio_probe(struct platform_device *pdev)
 	rc = register_virtio_device(&vm_dev->vdev);
 	if (rc)
 		put_device(&vm_dev->vdev.dev);
+
+#ifdef CONFIG_VERIFIED_KVM
+	vm_dev->phys_base = phys_iommu_base;
+	s2_iommu_probe(vm_dev, phys_iommu_base, iommu_size);
+#endif
 
 	return rc;
 }

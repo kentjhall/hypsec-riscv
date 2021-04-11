@@ -79,8 +79,8 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 		}
 		else
 		{
-			//pfn is mapped to a hostvisor SMMU table
-			print_string("\rassign pfn used by host smmu device\n");
+			//pfn is mapped to a hostvisor IOMMU table
+			print_string("\rassign pfn used by host iommu device\n");
 			v_panic();
 		}
 	} 
@@ -185,7 +185,7 @@ void revoke_vm_page(u32 vmid, u64 pfn)
 	release_lock_s2page();
 }
 
-void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
+void assign_pfn_to_iommu(u32 vmid, u64 gfn, u64 pfn)
 {
 	u64 map;
 	u32 owner, count;
@@ -205,7 +205,7 @@ void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 			set_pfn_count(pfn, INVALID_MEM);
 		}
 		else {
-			print_string("\r\assign_to_smmu: host pfn count\n");
+			print_string("\r\assign_to_iommu: host pfn count\n");
 			v_panic();
 		}
 	}
@@ -218,13 +218,13 @@ void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 		printhex_ul(owner);
 		print_string("\rpfn\n");
 		printhex_ul(pfn);
-		print_string("\rassign_to_smmu: owner unknown\n");
+		print_string("\rassign_to_iommu: owner unknown\n");
 		v_panic();
 	}
 	release_lock_s2page();
 }
 
-void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
+void update_iommu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
 	u64 pfn, gfn;
 	u32 owner, count, map;
@@ -243,7 +243,7 @@ void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 		if (owner == HOSTVISOR)
 		{
 			count = get_pfn_count(pfn);
-			if (count < HS_SMMU_CFG_SIZE)
+			if (count < HS_IOMMU_CFG_SIZE)
 			{
 				set_pfn_count(pfn, count + 1U);
 			}
@@ -252,7 +252,7 @@ void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 	else
 	{
 		v_panic();
-		print_string("\rbug in update_smmu_page\n");
+		print_string("\rbug in update_iommu_page\n");
 		print_string("\rvmid\n");
 		printhex_ul(vmid);
 		print_string("\rowner\n");
@@ -265,7 +265,7 @@ void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 	release_lock_s2page();
 }
 
-void unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
+void unmap_iommu_page(u32 cbndx, u32 index, u64 iova)
 {
 	u64 pte, pfn; 
 	u32 owner, count;

@@ -145,69 +145,69 @@ void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
 
 //MMIOOps
-u32 get_smmu_cfg_vmid(u32 cbndx, u32 num)
+u32 get_iommu_cfg_vmid(u32 cbndx, u32 num)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	u32 index;
-	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	return hs_data->smmu_cfg[index].vmid;
+	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
+	return hs_data->iommu_cfg[index].vmid;
 }
 
-void set_smmu_cfg_vmid(u32 cbndx, u32 num, u32 vmid)
+void set_iommu_cfg_vmid(u32 cbndx, u32 num, u32 vmid)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	u32 index;
-	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	hs_data->smmu_cfg[index].vmid = vmid;
+	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
+	hs_data->iommu_cfg[index].vmid = vmid;
 }
 
-u64 get_smmu_cfg_hw_ttbr(u32 cbndx, u32 num)
+u64 get_iommu_cfg_hw_ttbr(u32 cbndx, u32 num)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	u32 index;
-	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	return hs_data->smmu_cfg[index].hw_ttbr;
+	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
+	return hs_data->iommu_cfg[index].hw_ttbr;
 }
 
-void set_smmu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr)
+void set_iommu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	u32 index;
-	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	hs_data->smmu_cfg[index].hw_ttbr = hw_ttbr;
+	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
+	hs_data->iommu_cfg[index].hw_ttbr = hw_ttbr;
 }
 
 //MMIOAux
-u32 get_smmu_num(void)
+u32 get_iommu_num(void)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->hs_smmu_num;
+	return hs_data->hs_iommu_num;
 }	
 
-u64 get_smmu_size(u32 num)
+u64 get_iommu_size(u32 num)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->smmus[num].size;
+	return hs_data->iommus[num].size;
 }
 
-u32 get_smmu_num_context_banks(u32 num)
+u32 get_iommu_num_context_banks(u32 num)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->smmus[num].num_context_banks;
+	return hs_data->iommus[num].num_context_banks;
 }
 
-u32 get_smmu_pgshift(u32 num)
+u32 get_iommu_pgshift(u32 num)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->smmus[num].pgshift;
+	return hs_data->iommus[num].pgshift;
 }
 
-void smmu_pt_clear(u32 cbndx, u32 num) {
+void iommu_pt_clear(u32 cbndx, u32 num) {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
 	u32 index;
 	u64 va;
-	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	va = (u64)__hs_va(hs_data->smmu_cfg[index].hw_ttbr); 
+	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
+	va = (u64)__hs_va(hs_data->iommu_cfg[index].hw_ttbr); 
 	hs_memset((void *)va, 0, PAGE_SIZE * 2);
 };
 

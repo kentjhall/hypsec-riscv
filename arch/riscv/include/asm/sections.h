@@ -20,8 +20,8 @@ extern char shared_data_start[];
 extern char shared_data_end[];
 extern char stage2_tmp_pgs_start[];
 extern char stage2_tmp_pgs_end[];
-extern char smmu_pgs_start[];
-extern char smmu_pgs_end[];
+extern char iommu_pgs_start[];
+extern char iommu_pgs_end[];
 extern char _hypsec_end[];
 #endif
 

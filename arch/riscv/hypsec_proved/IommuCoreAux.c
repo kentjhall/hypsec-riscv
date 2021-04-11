@@ -2,29 +2,29 @@
 #include "MmioOps.h"
 
 
-u32 handle_smmu_global_access(u32 hsr, u64 offset, u32 smmu_index)
+u32 handle_iommu_global_access(u32 hsr, u64 offset, u32 iommu_index)
 {
 	u32 ret;
-	u64 data, smmu_enable, n, vmid, type, t_vmid;
+	u64 data, iommu_enable, n, vmid, type, t_vmid;
 
 	/* We don't care if it's read accesses */
 	data = host_get_mmio_data(hsr);
 
 	/* GR0 */
-	if (offset >= 0 && offset < ARM_SMMU_GR1_BASE)
+	if (offset >= 0 && offset < ARM_IOMMU_GR1_BASE)
 	{
-		if (offset == ARM_SMMU_GR0_sCR0)
+		if (offset == ARM_IOMMU_GR0_sCR0)
 		{
-			/* Check if the host tries to bypass SMMU */
-			smmu_enable = (data >> sCR0_SMCFCFG_SHIFT) & 1U;
-			if (smmu_enable == 0UL)
+			/* Check if the host tries to bypass IOMMU */
+			iommu_enable = (data >> sCR0_SMCFCFG_SHIFT) & 1U;
+			if (iommu_enable == 0UL)
 			{
 				ret = 0U;
 			} else {
 				ret = 1U;
 			}
 		}
-		else if (offset == ARM_SMMU_GR0_sCR2)
+		else if (offset == ARM_IOMMU_GR0_sCR2)
 		{
 			/*
 			 * Check if the host tries to bypass VMID by
@@ -43,11 +43,11 @@ u32 handle_smmu_global_access(u32 hsr, u64 offset, u32 smmu_index)
 			ret = 1U;
 		/* GR1 */
 	}
-	else if (offset >= ARM_SMMU_GR1_BASE && offset < ARM_SMMU_GR1_END)
+	else if (offset >= ARM_IOMMU_GR1_BASE && offset < ARM_IOMMU_GR1_END)
 	{
 		/* GR1 CBAR for the specific Context Bank Index */
-		n = (offset - ARM_SMMU_GR1_BASE) / 4U;
-		vmid = get_smmu_cfg_vmid(n, smmu_index);
+		n = (offset - ARM_IOMMU_GR1_BASE) / 4U;
+		vmid = get_iommu_cfg_vmid(n, iommu_index);
 		type = data >> CBAR_TYPE_SHIFT;
 		t_vmid = data & CBAR_VMID_MASK;
 		if (vmid == 0U)
@@ -73,24 +73,24 @@ u32 handle_smmu_global_access(u32 hsr, u64 offset, u32 smmu_index)
 }
 
 /* FIXME: we have a pointer here */
-u32 handle_smmu_cb_access(u64 offset)
+u32 handle_iommu_cb_access(u64 offset)
 {
 	u64 cb_offset;
 	u32 ret;
 
-	offset -= ARM_SMMU_GLOBAL_BASE;
-	cb_offset = offset & ARM_SMMU_PGSHIFT_MASK;
+	offset -= ARM_IOMMU_GLOBAL_BASE;
+	cb_offset = offset & ARM_IOMMU_PGSHIFT_MASK;
 
-	if (cb_offset == ARM_SMMU_CB_TTBR0)
+	if (cb_offset == ARM_IOMMU_CB_TTBR0)
 	{
 		/* We write hw_ttbr to CB_TTBR0 */
 		ret = 2U;
 	}
-	else if (cb_offset == ARM_SMMU_CB_CONTEXTIDR)
+	else if (cb_offset == ARM_IOMMU_CB_CONTEXTIDR)
 	{
 		ret = 0U;
 	}
-	else if (cb_offset == ARM_SMMU_CB_TTBCR)
+	else if (cb_offset == ARM_IOMMU_CB_TTBCR)
 	{
 		//TODO: this case is not implemented in the verified code, can we remove it?
 		ret = 3U;
@@ -107,7 +107,7 @@ u32 handle_smmu_cb_access(u64 offset)
 }
 
 //FIXME: do we need to use MMIO in the following?
-void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
+void __handle_iommu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
 {
 	void __iomem *base = (void*)fault_ipa;
 	u64 data;
@@ -131,13 +131,13 @@ void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val
 	}
 	else
 	{
-		print_string("\rhandle smmu write panic\n");
+		print_string("\rhandle iommu write panic\n");
 		printhex_ul(len);
 		v_panic();
 	}
 }
 
-void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
+void __handle_iommu_read(u32 hsr, u64 fault_ipa, u32 len)
 {
 	//TODO: We do not use vcpuid here
 	u32 rt;
@@ -157,7 +157,7 @@ void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 	else
 	{
 		/* We don't handle cases which len is smaller than 4 bytes */
-		print_string("\rhandle smmu read panic\n");
+		print_string("\rhandle iommu read panic\n");
 		printhex_ul(len);
 		v_panic();
 	}

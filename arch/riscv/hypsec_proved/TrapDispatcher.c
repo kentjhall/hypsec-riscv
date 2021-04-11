@@ -105,26 +105,26 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 		verify_and_load_images((u32)arg1);
 		set_host_regs(0, 1);
 	}
-	else if (callno == HVC_SMMU_FREE_PGD)
+	else if (callno == HVC_IOMMU_FREE_PGD)
 	{
-		__hs_free_smmu_pgd((u32)arg1, (u32)arg2);
+		__hs_free_iommu_pgd((u32)arg1, (u32)arg2);
 	}
-	else if (callno == HVC_SMMU_ALLOC_PGD)
+	else if (callno == HVC_IOMMU_ALLOC_PGD)
 	{
-		__hs_alloc_smmu_pgd((u32)arg1, (u32)arg2, (u32)arg3);
+		__hs_alloc_iommu_pgd((u32)arg1, (u32)arg2, (u32)arg3);
 	}
-	else if (callno == HVC_SMMU_LPAE_MAP)
+	else if (callno == HVC_IOMMU_LPAE_MAP)
 	{
-		__hs_arm_lpae_map(arg1, arg2, arg3, (u32)arg4, (u32)arg5);
+		__hs_riscv_lpae_map(arg1, arg2, arg3, (u32)arg4, (u32)arg5);
 	}
-	else if (callno == HVC_SMMU_LPAE_IOVA_TO_PHYS)
+	else if (callno == HVC_IOMMU_LPAE_IOVA_TO_PHYS)
 	{
-		ret64 = __hs_arm_lpae_iova_to_phys(arg1, (u32)arg2, (u32)arg3);
+		ret64 = __hs_riscv_lpae_iova_to_phys(arg1, (u32)arg2, (u32)arg3);
 		set_host_regs(0, ret64);
 	}
-	else if (callno == HVC_SMMU_CLEAR)
+	else if (callno == HVC_IOMMU_CLEAR)
 	{
-		__hs_arm_lpae_clear(arg1, (u32)arg2, (u32)arg3);
+		__hs_riscv_lpae_clear(arg1, (u32)arg2, (u32)arg3);
 	}
 	else if (callno == HVC_ENCRYPT_BUF)
 	{

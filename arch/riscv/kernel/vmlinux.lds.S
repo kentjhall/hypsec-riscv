@@ -142,9 +142,9 @@ SECTIONS
 	. += STAGE2_PAGES_SIZE;
 	stage2_pgs_end = .;
 
-	smmu_pgs_start = .;
-	. += SMMU_PAGES_SIZE;
-	smmu_pgs_end = .;
+	iommu_pgs_start = .;
+	. += IOMMU_PAGES_SIZE;
+	iommu_pgs_end = .;
 
 	stage2_tmp_pgs_start = .;
 	. += PAGE_SIZE;

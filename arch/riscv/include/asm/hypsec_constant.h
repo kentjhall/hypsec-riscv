@@ -112,7 +112,7 @@
 #define v_pmd_table(pmd)	(pmd & PMD_TYPE_MASK)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
-#define SMMU_HOST_OFFSET 1000000000UL
+#define IOMMU_HOST_OFFSET 1000000000UL
 #define PMD_PAGE_NUM	512
 
 #define PAGE_HYPSEC __pgprot(_HYP_PAGE_DEFAULT | PTE_HYP | PTE_HYP_XN)
