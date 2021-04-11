@@ -106,6 +106,7 @@
 					 | _PAGE_EXEC)
 
 #define PAGE_TABLE		__pgprot(_PAGE_TABLE)
+#define PAGE_LEAF       __pgprot(_PAGE_LEAF)
 
 /*
  * The RISC-V ISA doesn't yet specify how to query or modify PMAs, so we can't

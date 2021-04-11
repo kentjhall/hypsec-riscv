@@ -1,5 +1,5 @@
 #include "hypsec.h"
-
+#include <asm/hypsec_constant.h>
 /*
  * NPTWalk
  */
@@ -10,7 +10,8 @@ u32 get_npt_level(u32 vmid, u64 addr)
 
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 0U);
-
+#if 0
+	/* No PUD w/ Sv39x4 paging */
 	if (vmid == COREVISOR)
 	{
 		pud = walk_pud(vmid, pgd, addr, 0U);
@@ -19,10 +20,11 @@ u32 get_npt_level(u32 vmid, u64 addr)
 	{
 		pud = pgd;
 	}
-
+#endif
+	pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-	if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+	if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
 	{
 		u64 pte = walk_pte(vmid, pmd, addr);
 		if (phys_page(pte) == 0UL)
@@ -55,7 +57,7 @@ u64 walk_npt(u32 vmid, u64 addr)
 
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 0U);
-
+#if 0
 	if (vmid == COREVISOR)
 	{
 		pud = walk_pud(vmid, pgd, addr, 0U);
@@ -64,10 +66,11 @@ u64 walk_npt(u32 vmid, u64 addr)
 	{
 		pud = pgd;
 	}
-
+#endif
+	pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-	if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+	if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
 	{
 		pte = walk_pte(vmid, pmd, addr);
 		ret = pte;
@@ -86,6 +89,8 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 1U);
+	pud = pgd;
+#if 0
 	if (vmid == COREVISOR)
 	{
 		pud = walk_pud(vmid, pgd, addr, 1U);
@@ -94,12 +99,12 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	{
 		pud = pgd;
 	}
-
+#endif
 	if (level == 2U)
 	{
 		pmd = walk_pmd(vmid, pud, addr, 0U);
 		//TODO: Xupeng, why we don't check this in the verified code
-		if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+		if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
 		{
 			print_string("\rset existing npt: pmd\n");
 			v_panic();
@@ -112,7 +117,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	else
 	{
 		pmd = walk_pmd(vmid, pud, addr, 1U);
-		if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+		if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
 		{
 			v_set_pte(vmid, pmd, addr, pte);
 		}

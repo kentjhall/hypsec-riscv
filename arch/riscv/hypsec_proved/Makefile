@@ -4,7 +4,7 @@
 #obj-y += AbstractMachine.o
 #obj-y += MemBlock.o
 #obj-y += PageIndex.o
-#obj-y += PageMgmt.o
+obj-y += PageMgmt.o
 obj-y += PTAlloc.o
 obj-y += PTWalk.o
 obj-y += NPTWalk.o

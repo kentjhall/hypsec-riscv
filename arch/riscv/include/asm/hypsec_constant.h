@@ -134,15 +134,17 @@ static inline unsigned long stage2_pte_index(gpa_t addr, u32 level)
 	return (addr >> shift) & mask;
 }
 
+
 // Micros
 
 #define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
 #define pgd_idx(addr)	stage2_pte_index(addr, stage2_pgd_levels - 1)
-#define pud_idx(addr)	pud_index(addr)
+//#define pud_idx(addr)   pgd_idx(addr)
+//#define pud_idx(addr)	pud_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)
 #define pte_idx(addr)	pte_index(addr)
-#define v_pmd_table(pmd)	(pmd & PMD_TYPE_MASK)
+#define v_pmd_table(x) (x & )
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
 #define SMMU_HOST_OFFSET 1000000000UL
