@@ -64,7 +64,8 @@ u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc)
 	ret = 0UL;
 	if (pud != 0UL)
 	{
-		pud_pa = phys_page(pud);
+//		pud_pa = phys_page(pud);
+		pud_pa = pud & PAGE_MASK;
 		pmd_idx = pmd_idx(addr);
 		pmd = pt_load(vmid, pud_pa | (pmd_idx * 8));
 
@@ -86,7 +87,8 @@ u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
 	ret = 0UL;
 	if (pmd != 0UL)
 	{
-		pmd_pa = phys_page(pmd);
+//		pmd_pa = phys_page(pmd);
+		pmd_pa = pmd & PAGE_MASK;
 		pte_idx = pte_idx(addr);
 		ret = pt_load(vmid, pmd_pa | (pte_idx * 8UL));
 	}
@@ -101,19 +103,26 @@ void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 {
 	u64 pud_pa, pmd_idx;
 
-	pud_pa = phys_page(pud);
+//	pud_pa = phys_page(pud);
+	pud_pa = pud & PAGE_MASK;
 	pmd_idx = pmd_idx(addr);
 	//TODO: this is for grant/revoke OPT
-	pmd |= PMD_MARK;
+	// If we turn this on we need to clear this bit before using the PPN
+	// in each PTE
+//	pmd |= PMD_MARK;
 	pt_store(vmid, pud_pa | (pmd_idx * 8UL), pmd);
 }
 
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
 {
 	u64 pmd_pa, pte_idx;
-	pmd_pa = phys_page(pmd);
+//	printk("[v_set_pte]\n");
+//	pmd_pa = phys_page(pmd);
+	pmd_pa = pmd & PAGE_MASK;
 	pte_idx = pte_idx(addr);
 	//TODO: this is for grant/revoke OPT
-	pte |= PTE_MARK;
+	// If we turn this on we need to clear this bit before using the PPN
+	// in each PTE
+//	pte |= PTE_MARK;
 	pt_store(vmid, pmd_pa | (pte_idx * 8UL), pte);
 }

@@ -138,7 +138,10 @@ static inline unsigned long stage2_pte_index(gpa_t addr, u32 level)
 // Micros
 
 #define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
-#define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
+// This is some wacky ARM macro that doesn't work with RISCV
+//#define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
+
+#define phys_page(addr) ((addr) << PAGE_SHIFT)
 #define pgd_idx(addr)	stage2_pte_index(addr, stage2_pgd_levels - 1)
 //#define pud_idx(addr)   pgd_idx(addr)
 //#define pud_idx(addr)	pud_index(addr)

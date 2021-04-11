@@ -170,6 +170,7 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 {
 	unsigned long scause = csr_read(CSR_SCAUSE);
 	unsigned long vsatp = csr_read(CSR_VSATP);
+	unsigned long stval = csr_read(CSR_STVAL);
 
 	if (csr_read(CSR_SATP) != vsatp) {
 		csr_write(CSR_SATP, vsatp);
@@ -233,6 +234,12 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	case EXC_VIRTUAL_INST_FAULT:
 		csr_write(CSR_SEPC, csr_read(CSR_SEPC) + 4);
 		break;
+	case EXC_LOAD_PAGE_FAULT:
+		/* DEBUG */
+		panic("Unexpected HS page fault at 0x%lx\n", stval);
+	case EXC_STORE_PAGE_FAULT:
+		/* DEBUG */
+		panic("Unexpected store/AMO access fault at 0x%lx\n", stval);
 	default:
 		pr_info("Unknown scause: %ld, hedeleg: %lx, spv: %lx, spp: %lx, sepc: %lx\n", scause, csr_read(CSR_HEDELEG), csr_read(CSR_HSTATUS) & HSTATUS_SPV, csr_read(CSR_SSTATUS) & SR_SPP, csr_read(CSR_SEPC));
 		break;

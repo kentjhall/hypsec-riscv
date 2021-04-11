@@ -104,7 +104,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	{
 		pmd = walk_pmd(vmid, pud, addr, 0U);
 		//TODO: Xupeng, why we don't check this in the verified code
-		if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
+		if ((pmd & pgprot_val(PAGE_LEAF)) == 0U)
 		{
 			panic("\rset existing npt: pmd\n");
 		}
@@ -116,7 +116,9 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	else
 	{
 		pmd = walk_pmd(vmid, pud, addr, 1U);
-		if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
+//		printk("pmd value 0x%llx\n", pmd);
+//		printk("leaf mask 0x%lx\n", pgprot_val(PAGE_LEAF));
+		if ((pmd & pgprot_val(PAGE_LEAF)) == 0U)
 		{
 			v_set_pte(vmid, pmd, addr, pte);
 		}

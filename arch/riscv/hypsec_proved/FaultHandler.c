@@ -54,12 +54,12 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	u64 addr;
 
 	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
+	printk("Handling guest fault at 0x%llx\n", addr);
 	set_per_cpu_host_regs((u64)host_regs);
 
 //	TODO (etm): Merge in code to emulate mmio. For now, just assume we have
 //     a normal HvPA fault.
 	map_page_host(addr);
-	pr_alert("handle_host_stage2_fault: TODO");
 #if 0 // TEMPORARY
 	ret = emulate_mmio(addr, csr_read(CSR_HTINST));
 	if (ret == V_INVALID)
