@@ -27,7 +27,6 @@ u64 walk_s2pt(u32 vmid, u64 addr)
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
 {
 	acquire_lock_pt(vmid);
-	printk("[calling set_npt from mmap_s2pt]\n");
 	set_npt(vmid, addr, level, pte);
 	release_lock_pt(vmid);
 }

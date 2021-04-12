@@ -24,11 +24,9 @@ void map_page_host(u64 addr)
 	 */
 	if (owner == INVALID_MEM || (owner == HOSTVISOR || count > 0U))
 	{
-		perm = pgprot_val(PAGE_KERNEL);
+		perm = pgprot_val(PAGE_WRITE_EXEC);
 		new_pte = (pfn << _PAGE_PFN_SHIFT) | perm;
-		printk("<[pte value]> 0x%lx\n", (unsigned long) (new_pte));
 		/* VA_BITS config option must be set to 39 for 3 level paging */
-		printk("[about to call mmap_s2pt from map_page_host]");
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 	}
 	else

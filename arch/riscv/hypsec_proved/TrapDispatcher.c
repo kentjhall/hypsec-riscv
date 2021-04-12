@@ -53,7 +53,6 @@ void hvc_enable_s2_trans(void)
 	__kvm_riscv_hfence_gvma_all();
 
 	release_lock_core();
-	printk("[hvc_enable_s2_trans] success\n");
 }
 
 static void handle_host_hvc(struct kvm_cpu_context *hr)
@@ -230,7 +229,6 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	case EXC_INST_GUEST_PAGE_FAULT:
 	case EXC_LOAD_GUEST_PAGE_FAULT:
 	case EXC_STORE_GUEST_PAGE_FAULT:
-		printk("Handling stage2 fault\n");
 		handle_host_stage2_fault((struct s2_host_regs *)hregs);
 		break;
 	case EXC_VIRTUAL_INST_FAULT:
@@ -239,9 +237,11 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	case EXC_LOAD_PAGE_FAULT:
 		/* DEBUG */
 		panic("Unexpected HS page fault at 0x%lx\n", stval);
+		break;
 	case EXC_STORE_PAGE_FAULT:
 		/* DEBUG */
 		panic("Unexpected store/AMO access fault at 0x%lx\n", stval);
+		break;
 	default:
 		pr_info("Unknown scause: %ld, hedeleg: %lx, spv: %lx, spp: %lx, sepc: %lx\n", scause, csr_read(CSR_HEDELEG), csr_read(CSR_HSTATUS) & HSTATUS_SPV, csr_read(CSR_SSTATUS) & SR_SPP, csr_read(CSR_SEPC));
 		break;
