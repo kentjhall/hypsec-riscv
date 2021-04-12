@@ -34,7 +34,7 @@ u64 walk_pgd(u32 vmid, u64 hgatp, u64 addr, u32 alloc)
 	{
 		printk("[walk_pgd %c]\n", 'e');
 		pgd_pa = alloc_s2pt_pgd(vmid);
-		pgd = pgd_pa | pgprot_val(PAGE_TABLE);
+		pgd = (PFN_DOWN(pgd_pa) << _PAGE_PFN_SHIFT) | pgprot_val(PAGE_TABLE);
 		pt_store(vmid, hgatp_pa | (pgd_idx * 8UL), pgd);
 	}
 	printk("[walk_pgd %c]\n", 'f');
@@ -88,7 +88,7 @@ u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc)
 		if (pmd == 0UL && alloc == 1U)
 		{
 			pmd_pa = alloc_s2pt_pmd(vmid);
-			pmd = pmd_pa | pgprot_val(PAGE_TABLE);
+			pmd = (PFN_DOWN(pmd_pa) << _PAGE_PFN_SHIFT) | pgprot_val(PAGE_TABLE);
 			pt_store(vmid, pud_pa | (pmd_idx * 8UL), pmd);
 		}
 		ret = pmd;
