@@ -98,14 +98,14 @@ static void inline release_lock_pt(u32 vmid) {
 // TODO: make the following work
 static u64 inline pt_load(u32 vmid, u64 addr) {
 	unsigned long *ptr = __va(addr);
-//	printk("[pt_load __va] 0x%lx\n", (unsigned long) ptr);
+	printk("[pt_load __va] 0x%lx\n", (unsigned long) ptr);
 	return (u64)*ptr;
 };
 
 // TODO: make the following work
 static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 	unsigned long *ptr = __va(addr);
-//	printk("[pt_store __va] 0x%lx\n", (unsigned long) ptr);
+	printk("[pt_store __va] 0x%lx\n", (unsigned long) ptr);
 	*ptr = value;
 };
 
