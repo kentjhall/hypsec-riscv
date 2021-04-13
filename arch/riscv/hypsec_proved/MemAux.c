@@ -75,8 +75,8 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 		}
 		else
 		{
-			//pfn is mapped to a hostvisor SMMU table
-			print_string("\rassign pfn used by host smmu device\n");
+			//pfn is mapped to a hostvisor IOMMU table
+			print_string("\rassign pfn used by host iommu device\n");
 			v_panic();
 		}
 	} 
@@ -182,7 +182,7 @@ void revoke_vm_page(u32 vmid, u64 pfn)
 }
 #endif
 
-void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
+void assign_pfn_to_iommu(u32 vmid, u64 gfn, u64 pfn)
 {
 	/* No IOMMU in RV64 */
 
@@ -223,7 +223,7 @@ void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 //	release_lock_s2page();
 }
 
-void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
+void update_iommu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
 	/* No IOMMU in RV64 */
 
@@ -266,7 +266,7 @@ void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 //	release_lock_s2page();
 }
 
-void unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
+void unmap_iommu_page(u32 cbndx, u32 index, u64 iova)
 {
 	/* No IOMMU in RV64 */
 

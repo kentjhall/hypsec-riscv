@@ -71,6 +71,7 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	ret = emulate_mmio(addr, csr_read(CSR_HTINST));
 	if (ret == V_INVALID)
 	{
+		pr_alert("handle_host_stage2_fault: TODO");
 		map_page_host(addr);
 	}
 #endif

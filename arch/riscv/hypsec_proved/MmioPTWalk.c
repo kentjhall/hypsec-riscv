@@ -4,25 +4,25 @@
  * MmioPTWalk
  */
 
-u64 walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc)
+u64 walk_iommu_pgd(u64 ttbr, u64 addr, u32 alloc)
 {
 	u64 ttbr_pa, ret, pgd_idx, pgd, pgd_pa;
 
 	ret = 0UL;
 	ttbr_pa = phys_page(ttbr);
 	pgd_idx = stage2_pgd_index(addr);
-	pgd = smmu_pt_load(ttbr_pa | (pgd_idx * 8UL));
+	pgd = iommu_pt_load(ttbr_pa | (pgd_idx * 8UL));
 	if (pgd == 0UL && alloc == 1U)
 	{
-		pgd_pa = alloc_smmu_pgd_page();
+		pgd_pa = alloc_iommu_pgd_page();
 		pgd = pgd_pa | PMD_TYPE_TABLE;
-		smmu_pt_store(ttbr_pa | pgd_idx * 8UL, pgd);
+		iommu_pt_store(ttbr_pa | pgd_idx * 8UL, pgd);
 	}
 	ret = pgd;
 	return check64(ret);
 }
 
-u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc)
+u64 walk_iommu_pmd(u64 pgd, u64 addr, u32 alloc)
 {
 	u64 pgd_pa, ret, pmd_idx, pmd, pmd_pa;
 
@@ -31,20 +31,20 @@ u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc)
 	{
 		pgd_pa = phys_page(pgd);
 		pmd_idx = pmd_index(addr);
-		pmd = smmu_pt_load(pgd_pa | (pmd_idx * 8));
+		pmd = iommu_pt_load(pgd_pa | (pmd_idx * 8));
 		pmd_pa = phys_page(pmd);
 		if (pmd_pa == 0UL && alloc == 1U)
 		{
-			pmd_pa = alloc_smmu_pmd_page();
+			pmd_pa = alloc_iommu_pmd_page();
 			pmd = pmd_pa | PMD_TYPE_TABLE;
-			smmu_pt_store(pgd_pa | (pmd_idx * 8UL), pmd);
+			iommu_pt_store(pgd_pa | (pmd_idx * 8UL), pmd);
 		}
 		ret = pmd;
 	}
 	return check64(ret);
 }
 
-u64 walk_smmu_pte(u64 pmd, u64 addr)
+u64 walk_iommu_pte(u64 pmd, u64 addr)
 {
 	u64 pmd_pa, ret, pte_idx;
 
@@ -53,16 +53,16 @@ u64 walk_smmu_pte(u64 pmd, u64 addr)
 	{
 		pmd_pa = phys_page(pmd);
 		pte_idx = pte_index(addr);
-		ret = smmu_pt_load(pmd_pa | (pte_idx * 8UL));
+		ret = iommu_pt_load(pmd_pa | (pte_idx * 8UL));
 	}
 	return check64(ret);
 }
 
-void set_smmu_pte(u64 pmd, u64 addr, u64 pte)
+void set_iommu_pte(u64 pmd, u64 addr, u64 pte)
 {
 	u64 pmd_pa, pte_idx;
 
 	pmd_pa = phys_page(pmd);
 	pte_idx = pte_index(addr);
-	smmu_pt_store(pmd_pa | (pte_idx * 8UL), pte);
+	iommu_pt_store(pmd_pa | (pte_idx * 8UL), pte);
 }

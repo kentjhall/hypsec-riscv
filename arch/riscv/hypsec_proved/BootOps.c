@@ -211,7 +211,7 @@ void verify_and_load_images(u32 vmid)
 	release_lock_vm(vmid);
 }
 
-void alloc_smmu(u32 vmid, u32 cbndx, u32 index) 
+void alloc_iommu(u32 vmid, u32 cbndx, u32 index) 
 {
 	u32 state;
 
@@ -221,7 +221,7 @@ void alloc_smmu(u32 vmid, u32 cbndx, u32 index)
 		state = get_vm_state(vmid);
 		if (state == VERIFIED) 
 		{
-			print_string("\rpanic: alloc_smmu\n");
+			print_string("\rpanic: alloc_iommu\n");
 			v_panic();
 		}
 	}
@@ -229,7 +229,7 @@ void alloc_smmu(u32 vmid, u32 cbndx, u32 index)
 	release_lock_vm(vmid);
 }
 
-void assign_smmu(u32 vmid, u32 pfn, u32 gfn) 
+void assign_iommu(u32 vmid, u32 pfn, u32 gfn) 
 {
 	u32 state;
 
@@ -239,15 +239,15 @@ void assign_smmu(u32 vmid, u32 pfn, u32 gfn)
 		state = get_vm_state(vmid);
 		if (state == VERIFIED) 
 		{
-			print_string("\rpanic: assign_smmu\n");
+			print_string("\rpanic: assign_iommu\n");
 			v_panic();
 		}
-		assign_pfn_to_smmu(vmid, gfn, pfn);
+		assign_pfn_to_iommu(vmid, gfn, pfn);
 	}
 	release_lock_vm(vmid);
 }
 
-void map_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
+void map_iommu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
 	u32 state;
 	acquire_lock_vm(vmid);
@@ -256,15 +256,15 @@ void map_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 		state = get_vm_state(vmid);
 		if (state == VERIFIED) 
 		{
-			print_string("\rpanic: map_smmu\n");
+			print_string("\rpanic: map_iommu\n");
 			v_panic();
 		}
 	}
-	update_smmu_page(vmid, cbndx, index, iova, pte);
+	update_iommu_page(vmid, cbndx, index, iova, pte);
 	release_lock_vm(vmid);
 }
 
-void clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova) 
+void clear_iommu(u32 vmid, u32 cbndx, u32 index, u64 iova) 
 {
 	u32 state;
 
@@ -274,11 +274,11 @@ void clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova)
 		state = get_vm_state(vmid);
 		if (state == VERIFIED && get_vm_power(vmid))
 		{
-			print_string("\rpanic: clear_smmu\n");
+			print_string("\rpanic: clear_iommu\n");
 			v_panic();
 		}
 	}
-	unmap_smmu_page(cbndx, index, iova);
+	unmap_iommu_page(cbndx, index, iova);
 	release_lock_vm(vmid);
 }
 

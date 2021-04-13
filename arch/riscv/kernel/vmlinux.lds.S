@@ -135,7 +135,9 @@ SECTIONS
  * BSS section is too large.
  */
 #ifdef CONFIG_VERIFIED_KVM
-	. += SZ_16M;
+	// To avoid the DTB; how big this needs to be seems to depend
+	// on kernel config, so going with alot to be safe.
+	. += SZ_128M;
 
 	/* 16KiB align for hgatp first level of Stage-2 page tables */
 	. = ALIGN(0x4000);
@@ -143,9 +145,9 @@ SECTIONS
 	. += STAGE2_PAGES_SIZE;
 	stage2_pgs_end = .;
 
-	smmu_pgs_start = .;
-	. += SMMU_PAGES_SIZE;
-	smmu_pgs_end = .;
+	iommu_pgs_start = .;
+	. += IOMMU_PAGES_SIZE;
+	iommu_pgs_end = .;
 
 	stage2_tmp_pgs_start = .;
 	. += PAGE_SIZE;
