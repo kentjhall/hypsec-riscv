@@ -12,6 +12,9 @@
 #include <asm/kvm_host.h>
 #include <asm/thread_info.h>
 #include <asm/ptrace.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 void asm_offsets(void);
 
@@ -222,6 +225,9 @@ void asm_offsets(void)
 	OFFSET(KVM_CPU_CONTEXT_SEPC, kvm_cpu_context, sepc);
 	OFFSET(KVM_CPU_CONTEXT_SSTATUS, kvm_cpu_context, sstatus);
 	OFFSET(KVM_CPU_CONTEXT_HSTATUS, kvm_cpu_context, hstatus);
+
+	OFFSET(HS_THREAD_INFO_HS_SP, hs_thread_info, hs_sp);
+	OFFSET(HS_THREAD_INFO_PREV_SP, hs_thread_info, prev_sp);
 #endif
 
 	OFFSET(KVM_ARCH_TRAP_SEPC, kvm_cpu_trap, sepc);

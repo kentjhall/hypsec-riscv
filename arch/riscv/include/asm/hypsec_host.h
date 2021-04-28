@@ -32,6 +32,12 @@ struct hs_per_cpu_data {
 	struct s2_host_regs *host_regs;
 };
 
+struct hs_thread_info {
+	long hs_sp;
+	long prev_sp;
+	int cpu;
+};
+
 #if 0
 typedef struct arch_spinlock_t arch_spinlock_t;
 struct arch_spinlock_t {
@@ -126,6 +132,7 @@ struct hs_data {
 	bool installed;
 
 	struct hs_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
+	struct hs_thread_info thread_info[HYPSEC_MAX_CPUS];
 
 	unsigned long core_start, core_end;
 
@@ -187,11 +194,6 @@ static inline void hs_init_vgic_cpu_base(phys_addr_t base)
 {
 	struct hs_data *hs_data = (void *)kvm_ksym_ref(hs_data_start);
 	hs_data->vgic_cpu_base = base;
-}
-
-static inline void __noreturn __hyp_panic(void)
-{
-	panic("Hyp Panic");
 }
 
 extern void printhex_ul(unsigned long input);

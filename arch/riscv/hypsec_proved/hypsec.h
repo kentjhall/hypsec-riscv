@@ -31,6 +31,14 @@ static u64 inline check64(u64 val) {
 	return val;
 };
 
+static inline void __noreturn __hyp_panic(void)
+{
+	print_string("SEPC:\n");
+	printhex_ul(csr_read(CSR_SEPC));
+	print_string("Panic in HS mode! Spinning forever now...\n");
+	for(;;); // just spin, why not
+}
+
 static void inline v_panic(void) {
 	//__hyp_panic();
 	u32 vmid = get_cur_vmid();
@@ -44,6 +52,10 @@ static void inline v_panic(void) {
 	}
 	printhex_ul(csr_read(CSR_SCAUSE));
 }
+
+#define current_hs_thread_info() \
+	((struct hs_thread_info *)riscv_current_is_tp)
+
 void    clear_phys_mem(u64 pfn);
 //u64     get_shared_kvm(u32 vmid);
 //u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
@@ -617,21 +629,21 @@ static u64 inline get_plic_size(void)
 static void inline set_per_cpu_host_regs(u64 hr)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	hs_data->per_cpu_data[pcpuid].host_regs = (struct s2_host_regs *)hr;
 };
 
 static void inline set_host_regs(int nr, u64 value)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	hs_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
 };
 
 static u64 inline get_host_regs(int nr)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	return hs_data->per_cpu_data[pcpuid].host_regs->regs[nr];
 };
 

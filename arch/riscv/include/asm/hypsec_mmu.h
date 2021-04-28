@@ -123,7 +123,8 @@ pte_t *pte_offset_hs(pmd_t *pmd, u64 addr);
 extern void hs_encrypt_buf(u32 vmid, u64 buf, u64 out_buf);
 extern void hs_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
-extern void map_mem_hs(void);
+extern pgd_t *hyp_pg_dir;
+extern void setup_vm_hyp(void);
 extern void __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa);
 extern void hypsec_tlb_flush_local_vmid(void);
 

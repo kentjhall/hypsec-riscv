@@ -33,6 +33,7 @@ int kvm_arch_check_processor_compat(void *opaque)
 static inline void enter_vs_mode(void)
 {
 	extern void __kvm_riscv_host_trap(void);
+	struct hs_data *hs_data = (void *)hs_data_start;
 
 	csr_write(CSR_VSSTATUS, csr_read(CSR_SSTATUS));
 	csr_write(CSR_HIE, csr_read(CSR_SIE) << VSIP_TO_HVIP_SHIFT);
@@ -51,6 +52,7 @@ static inline void enter_vs_mode(void)
 	csr_set(CSR_HSTATUS, HSTATUS_SPV);
 	csr_set(CSR_SSTATUS, SR_SPP | SR_SPIE | SR_FS_INITIAL);
 	csr_write(CSR_SIE, -1UL);
+	csr_write(CSR_SSCRATCH, &hs_data->thread_info[smp_processor_id()]);
 	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
 	csr_write(CSR_SATP, PFN_DOWN(__pa(hyp_pg_dir)) | SATP_MODE);
 	local_flush_tlb_all();
@@ -114,6 +116,8 @@ int kvm_arch_init(void *opaque)
 {
 #ifndef CONFIG_VERIFIED_KVM
 	const char *str;
+#else
+	int cpu;
 #endif
 
 	if (!riscv_isa_extension_available(NULL, h)) {
@@ -157,6 +161,24 @@ int kvm_arch_init(void *opaque)
 #else
 	init_hs_data_page();
 	setup_vm_hyp();
+
+	/*
+	 * Allocate stack pages for Hypervisor-mode
+	 */
+	for_each_possible_cpu(cpu) {
+		unsigned long stack_page;
+		struct hs_data *hs_data = (void *)hs_data_start;
+
+		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(PAGE_SIZE * 2));
+		if (!stack_page)
+			return -ENOMEM;
+
+		
+		hs_data->thread_info[cpu].hs_sp = stack_page;
+		hs_data->thread_info[cpu].cpu = cpu;
+	}
+
+	init_hypsec_io();
 #endif
 
 	return 0;

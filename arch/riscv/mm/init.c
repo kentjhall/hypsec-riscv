@@ -562,12 +562,25 @@ asmlinkage void __init setup_vm(uintptr_t dtb_pa)
 #ifdef CONFIG_VERIFIED_KVM
 pgd_t *hyp_pg_dir;
 
+static void create_hyp_mappings(unsigned long start, unsigned long end, pgprot_t prot)
+{
+	uintptr_t va, map_size;
+	phys_addr_t pa;
+
+	map_size = best_map_size(start, end - start);
+	pr_alert("start: %lx, end: %lx\n", start, end);
+	for (pa = start; pa < end; pa += map_size) {
+		va = (uintptr_t)__va(pa);
+		create_pgd_mapping(hyp_pg_dir, va, pa,
+				   map_size, prot);
+	}
+}
+
 void setup_vm_hyp(void)
 {
         /* struct memblock_region *reg; */
 	struct pt_alloc_ops old_pt_ops = pt_ops;
-	uintptr_t va, map_size;
-	phys_addr_t pa, start, end;
+	phys_addr_t start, end;
 	u64 i;
 
 	hyp_pg_dir = phys_to_virt(host_alloc_pgd(1));
@@ -586,15 +599,18 @@ void setup_vm_hyp(void)
 			start = __pa(PAGE_OFFSET);
 
                 pr_info("mapping mem start %llx end %llx to HS\n", start, end);
-		map_size = best_map_size(start, end - start);
-		for (pa = start; pa < end; pa += map_size) {
-			va = (uintptr_t)__va(pa);
-			create_pgd_mapping(hyp_pg_dir, va, pa,
-					   map_size, PAGE_KERNEL_EXEC);
-		}
+		create_hyp_mappings(start, end, PAGE_KERNEL_EXEC);
 	}
 
 	pt_ops = old_pt_ops;
+}
+
+int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
+                              unsigned long *haddr)
+{
+	create_hyp_mappings(phys_addr, phys_addr + size, PAGE_KERNEL);
+        *haddr = phys_addr;
+        return 0;
 }
 #endif
 

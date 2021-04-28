@@ -9,11 +9,17 @@
 
 	.align 2
 ENTRY(__kvm_riscv_host_trap)
+	/* Swap host for HS tp */
+	csrrw tp, CSR_SCRATCH, tp
+
+	/* Save host sp, restore HS sp */
+	REG_S sp, HS_THREAD_INFO_PREV_SP(tp)
+	REG_L sp, HS_THREAD_INFO_HS_SP(tp)
+
 	/* Save Host GPRs */
 	addi sp, sp, -(KVM_CPU_CONTEXT_SIZE_ON_STACK)
 	REG_S	ra, (KVM_CPU_CONTEXT_RA)(sp)
 	REG_S	gp, (KVM_CPU_CONTEXT_GP)(sp)
-	REG_S	tp, (KVM_CPU_CONTEXT_TP)(sp)
 	REG_S	t0, (KVM_CPU_CONTEXT_T0)(sp)
 	REG_S	t1, (KVM_CPU_CONTEXT_T1)(sp)
 	REG_S	t2, (KVM_CPU_CONTEXT_T2)(sp)
@@ -49,7 +55,6 @@ ENTRY(__kvm_riscv_host_trap)
 	/* Restore Host GPRs */
 	REG_L	ra, (KVM_CPU_CONTEXT_RA)(sp)
 	REG_L	gp, (KVM_CPU_CONTEXT_GP)(sp)
-	REG_L	tp, (KVM_CPU_CONTEXT_TP)(sp)
 	REG_L	t0, (KVM_CPU_CONTEXT_T0)(sp)
 	REG_L	t1, (KVM_CPU_CONTEXT_T1)(sp)
 	REG_L	t2, (KVM_CPU_CONTEXT_T2)(sp)
@@ -78,6 +83,12 @@ ENTRY(__kvm_riscv_host_trap)
 	REG_L	t5, (KVM_CPU_CONTEXT_T5)(sp)
 	REG_L	t6, (KVM_CPU_CONTEXT_T6)(sp)
 	addi sp, sp, KVM_CPU_CONTEXT_SIZE_ON_STACK
+
+	/* Restore host sp */
+	REG_L sp, HS_THREAD_INFO_PREV_SP(tp)
+
+	/* Swap HS for host tp */
+	csrrw tp, CSR_SCRATCH, tp
 
 	/* Return to VS mode */
 	sret

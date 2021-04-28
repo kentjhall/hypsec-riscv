@@ -293,25 +293,6 @@ void init_hypsec_io(void)
 
 	hs_data = (void *)kvm_ksym_ref(hs_data_start);
 
-#ifdef CONFIG_SERIAL_8250_CONSOLE
-	//TODO: Hacky stuff for prints on m400
-	err = create_hypsec_io_mappings((phys_addr_t)0x1c021000,
-					 PAGE_SIZE,
-					 &hs_data->uart_8250_base);
-	if (err) {
-		kvm_err("Cannot map uart 8250\n");
-		goto out_err;
-	}
-#endif
-
-	err = create_hypsec_io_mappings((phys_addr_t)hs_data->pl011_base,
-					 PAGE_SIZE,
-					 &hs_data->pl011_base);
-	if (err) {
-		kvm_err("Cannot map pl011\n");
-		goto out_err;
-	}
-
 	plic = &hs_data->plic;
 	err = create_hypsec_io_mappings(plic->phys_base, plic->size,
 					&plic->hyp_base);
