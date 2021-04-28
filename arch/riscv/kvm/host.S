@@ -9,11 +9,14 @@
 
 	.align 2
 ENTRY(__kvm_riscv_host_trap)
-	/* Save Host GPRs (except T0-T6) */
+	/* Save Host GPRs */
 	addi sp, sp, -(KVM_CPU_CONTEXT_SIZE_ON_STACK)
 	REG_S	ra, (KVM_CPU_CONTEXT_RA)(sp)
 	REG_S	gp, (KVM_CPU_CONTEXT_GP)(sp)
 	REG_S	tp, (KVM_CPU_CONTEXT_TP)(sp)
+	REG_S	t0, (KVM_CPU_CONTEXT_T0)(sp)
+	REG_S	t1, (KVM_CPU_CONTEXT_T1)(sp)
+	REG_S	t2, (KVM_CPU_CONTEXT_T2)(sp)
 	REG_S	s0, (KVM_CPU_CONTEXT_S0)(sp)
 	REG_S	s1, (KVM_CPU_CONTEXT_S1)(sp)
 	REG_S	a0, (KVM_CPU_CONTEXT_A0)(sp)
@@ -34,15 +37,22 @@ ENTRY(__kvm_riscv_host_trap)
 	REG_S	s9, (KVM_CPU_CONTEXT_S9)(sp)
 	REG_S	s10, (KVM_CPU_CONTEXT_S10)(sp)
 	REG_S	s11, (KVM_CPU_CONTEXT_S11)(sp)
+	REG_S	t3, (KVM_CPU_CONTEXT_T3)(sp)
+	REG_S	t4, (KVM_CPU_CONTEXT_T4)(sp)
+	REG_S	t5, (KVM_CPU_CONTEXT_T5)(sp)
+	REG_S	t6, (KVM_CPU_CONTEXT_T6)(sp)
 
 	/* Handle the trap */
 	move a0, sp /* kvm_cpu_context */
 	jal handle_host_hs_trap
 
-	/* Restore Host GPRs (except T0-T6) */
+	/* Restore Host GPRs */
 	REG_L	ra, (KVM_CPU_CONTEXT_RA)(sp)
 	REG_L	gp, (KVM_CPU_CONTEXT_GP)(sp)
 	REG_L	tp, (KVM_CPU_CONTEXT_TP)(sp)
+	REG_L	t0, (KVM_CPU_CONTEXT_T0)(sp)
+	REG_L	t1, (KVM_CPU_CONTEXT_T1)(sp)
+	REG_L	t2, (KVM_CPU_CONTEXT_T2)(sp)
 	REG_L	s0, (KVM_CPU_CONTEXT_S0)(sp)
 	REG_L	s1, (KVM_CPU_CONTEXT_S1)(sp)
 	REG_L	a0, (KVM_CPU_CONTEXT_A0)(sp)
@@ -63,6 +73,10 @@ ENTRY(__kvm_riscv_host_trap)
 	REG_L	s9, (KVM_CPU_CONTEXT_S9)(sp)
 	REG_L	s10, (KVM_CPU_CONTEXT_S10)(sp)
 	REG_L	s11, (KVM_CPU_CONTEXT_S11)(sp)
+	REG_L	t3, (KVM_CPU_CONTEXT_T3)(sp)
+	REG_L	t4, (KVM_CPU_CONTEXT_T4)(sp)
+	REG_L	t5, (KVM_CPU_CONTEXT_T5)(sp)
+	REG_L	t6, (KVM_CPU_CONTEXT_T6)(sp)
 	addi sp, sp, KVM_CPU_CONTEXT_SIZE_ON_STACK
 
 	/* Return to VS mode */
