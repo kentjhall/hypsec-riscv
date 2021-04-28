@@ -21,6 +21,9 @@
 #include <asm/soc.h>
 #include <asm/io.h>
 #include <asm/ptdump.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #include "../kernel/head.h"
 
@@ -158,7 +161,11 @@ void __init setup_bootmem(void)
 {
 	phys_addr_t mem_start = 0;
 	phys_addr_t start, end = 0;
+#ifndef CONFIG_VERIFIED_KVM
 	phys_addr_t vmlinux_end = __pa_symbol(&_end);
+#else
+	phys_addr_t vmlinux_end = __pa_symbol(&_early_end);
+#endif
 	phys_addr_t vmlinux_start = __pa_symbol(&_start);
 	u64 i;
 
@@ -439,7 +446,11 @@ asmlinkage void __init setup_vm(uintptr_t dtb_pa)
 {
 	uintptr_t va, pa, end_va;
 	uintptr_t load_pa = (uintptr_t)(&_start);
+#ifndef CONFIG_VERIFIED_KVM
 	uintptr_t load_sz = (uintptr_t)(&_end) - load_pa;
+#else
+	uintptr_t load_sz = (uintptr_t)(&_early_end) - load_pa;
+#endif
 	uintptr_t map_size = best_map_size(load_pa, MAX_EARLY_MAPPING_SIZE);
 #ifndef __PAGETABLE_PMD_FOLDED
 	pmd_t fix_bmap_spmd, fix_bmap_epmd;
@@ -548,6 +559,45 @@ asmlinkage void __init setup_vm(uintptr_t dtb_pa)
 #endif
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+pgd_t *hyp_pg_dir;
+
+void setup_vm_hyp(void)
+{
+        /* struct memblock_region *reg; */
+	struct pt_alloc_ops old_pt_ops = pt_ops;
+	uintptr_t va, map_size;
+	phys_addr_t pa, start, end;
+	u64 i;
+
+	hyp_pg_dir = phys_to_virt(host_alloc_pgd(1));
+
+	pt_ops.alloc_pte = (phys_addr_t (*)(uintptr_t))host_alloc_pte;
+#ifndef __PAGETABLE_PMD_FOLDED
+	pt_ops.alloc_pmd = (phys_addr_t (*)(uintptr_t))host_alloc_pmd;
+#endif
+
+	/* Map all memory banks */
+	for_each_mem_range(i, &start, &end) {
+		if (start >= end)
+			break;
+		if (start <= __pa(PAGE_OFFSET) &&
+		    __pa(PAGE_OFFSET) < end)
+			start = __pa(PAGE_OFFSET);
+
+                pr_info("mapping mem start %llx end %llx to HS\n", start, end);
+		map_size = best_map_size(start, end - start);
+		for (pa = start; pa < end; pa += map_size) {
+			va = (uintptr_t)__va(pa);
+			create_pgd_mapping(hyp_pg_dir, va, pa,
+					   map_size, PAGE_KERNEL_EXEC);
+		}
+	}
+
+	pt_ops = old_pt_ops;
+}
+#endif
+
 static void __init setup_vm_final(void)
 {
 	uintptr_t va, map_size;
@@ -600,6 +650,7 @@ static void __init setup_vm_final(void)
 	pt_ops.alloc_pmd = alloc_pmd_late;
 	pt_ops.get_pmd_virt = get_pmd_virt_late;
 #endif
+
 }
 #else
 asmlinkage void __init setup_vm(uintptr_t dtb_pa)

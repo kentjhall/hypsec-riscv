@@ -238,8 +238,6 @@ void init_hs_data_page(void)
 		/* hgatp must be 16KiB aligned */
 		BUG();
 	}
-	pr_alert("hs_data->vm_info[HOSTVISOR].page_pool_start pa: %llx", hs_data->vm_info[HOSTVISOR].page_pool_start);
-	pr_alert("host pool end: %llx", hs_data->vm_info[HOSTVISOR].page_pool_start + STAGE2_HOST_POOL_SIZE);
 
 	hs_data->host_hgatp = (hs_data->vm_info[HOSTVISOR].page_pool_start >> PAGE_SHIFT) & HGATP_PPN;
 	hs_data->host_hgatp |= stage2_mode;

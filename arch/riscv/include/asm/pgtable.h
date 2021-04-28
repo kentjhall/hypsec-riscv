@@ -116,6 +116,11 @@
 
 extern pgd_t swapper_pg_dir[];
 
+#ifdef CONFIG_VERIFIED_KVM
+extern pgd_t *hyp_pg_dir;
+void setup_vm_hyp(void);
+#endif
+
 /* MAP_PRIVATE permissions: xwr (copy-on-write) */
 #define __P000	PAGE_NONE
 #define __P001	PAGE_READ

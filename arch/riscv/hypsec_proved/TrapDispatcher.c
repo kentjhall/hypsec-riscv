@@ -169,13 +169,7 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 {
 	unsigned long scause = csr_read(CSR_SCAUSE);
-	unsigned long vsatp = csr_read(CSR_VSATP);
 	unsigned long stval = csr_read(CSR_STVAL);
-
-	if (csr_read(CSR_SATP) != vsatp) {
-		csr_write(CSR_SATP, vsatp);
-		local_flush_tlb_all();
-	}
 
 	if (scause & CAUSE_IRQ_FLAG) {
 		unsigned long cause = scause & ~CAUSE_IRQ_FLAG;

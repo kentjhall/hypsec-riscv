@@ -230,11 +230,7 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.start_code = (unsigned long) _stext;
 	init_mm.end_code   = (unsigned long) _etext;
 	init_mm.end_data   = (unsigned long) _edata;
-#ifndef CONFIG_VERIFIED_KVM
 	init_mm.brk        = (unsigned long) _end;
-#else
-	init_mm.brk        = (unsigned long) _hypsec_end;
-#endif
 
 	*cmdline_p = boot_command_line;
 

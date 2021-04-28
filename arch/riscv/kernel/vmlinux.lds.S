@@ -123,21 +123,11 @@ SECTIONS
 
 	BSS_SECTION(PAGE_SIZE, PAGE_SIZE, 0)
 
-#ifdef CONFIG_EFI
-	. = ALIGN(PECOFF_SECTION_ALIGNMENT);
-	__pecoff_data_virt_size = ABSOLUTE(. - __pecoff_text_end);
-#endif
-	_end = .;
-
-/*
- * NOTE: This unfortunately needs to be after _end because there seems
- * to be some loading issue (likely a QEMU bug?) when the kernel image
- * BSS section is too large.
- */
 #ifdef CONFIG_VERIFIED_KVM
-	// To avoid the DTB; how big this needs to be seems to depend
-	// on kernel config, so going with alot to be safe.
-	. += SZ_128M;
+	_early_end = .;
+
+	/* Don't wanna stomp on the FDT */
+	. += SZ_32M;
 
 	/* 16KiB align for hgatp first level of Stage-2 page tables */
 	. = ALIGN(0x4000);
@@ -162,10 +152,14 @@ SECTIONS
 	shared_data_start = .;
 	. += PAGE_SIZE * (PAGE_SIZE * 4);
 	shared_data_end = .;
-
-	_hypsec_end = .;
-
 #endif
+
+#ifdef CONFIG_EFI
+	. = ALIGN(PECOFF_SECTION_ALIGNMENT);
+	__pecoff_data_virt_size = ABSOLUTE(. - __pecoff_text_end);
+#endif
+
+	_end = .;
 
 	STABS_DEBUG
 	DWARF_DEBUG

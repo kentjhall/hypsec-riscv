@@ -56,12 +56,6 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	u64 addr;
 
 	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
-	pr_alert("sepc: %lx, scause: %lx", csr_read(CSR_SEPC), csr_read(CSR_SCAUSE));
-	if (addr == prev_fa) {
-		panic("Previously faulted on 0x%llx\n", addr);
-	} else {
-		prev_fa = addr;
-	}
 	set_per_cpu_host_regs((u64)host_regs);
 
 //	TODO (etm): Merge in code to emulate mmio. For now, just assume we have

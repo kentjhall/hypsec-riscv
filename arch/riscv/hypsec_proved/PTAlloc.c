@@ -41,7 +41,7 @@ u64 alloc_s2pt_pgd(u32 vmid)
 
 	if (next + PAGE_SIZE <= end)
 	{
-		set_pgd_next(vmid, next);
+		set_pgd_next(vmid, next + PAGE_SIZE);
 	}
 	else
 	{

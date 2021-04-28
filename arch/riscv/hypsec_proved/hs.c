@@ -189,10 +189,8 @@ void stage2_inject_el1_fault(unsigned long addr)
 
 void reject_invalid_mem_access(phys_addr_t addr)
 {
-	print_string("\rinvalid access of guest memory\n\r");
-	print_string("\rpc: \n");
-	printhex_ul(read_sysreg(elr_hs));
-	print_string("\rpa: \n");
-	printhex_ul(addr);
+	printk("invalid access of guest memory\n\r");
+	printk("pc: %lx\n", csr_read(CSR_SEPC));
+	printk("pa: %lx\n", addr);
 	stage2_inject_el1_fault(addr);
 }
