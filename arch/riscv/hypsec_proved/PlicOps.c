@@ -10,6 +10,7 @@ u32 emulate_mmio(u64 addr, u32 htinst)
 	ret = is_plic_range(addr);
 	if (ret != V_INVALID)
 	{
+		print_string("PLIC!!!!!!!!\n");
 		handle_host_mmio(htinst);
 	}
 	release_lock_plic();

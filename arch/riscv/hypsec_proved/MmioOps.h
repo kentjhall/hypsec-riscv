@@ -1,8 +1,6 @@
 #ifndef __RISCV_VERIFIED_MMIO__
 #define __RISCV_VERIFIED_MMIO__
 
-typedef u64 arm_lpae_iopte;
-
 #define INSN_OPCODE_MASK	0x007c
 #define INSN_OPCODE_SHIFT	2
 #define INSN_OPCODE_SYSTEM	28
@@ -54,59 +52,11 @@ typedef u64 arm_lpae_iopte;
 
 #define INSN_IS_16BIT(insn)	(((insn) & INSN_16BIT_MASK) != INSN_16BIT_MASK)
 
-#define SH_RD				7
+#define SH_RD 7
 
 static inline u32 host_dabt_get_as(u32 htinst)
 {
-	unsigned long insn;
-	int len = 0;
-
-	/* Determine trapped instruction */
-	if (htinst & 0x1) {
-		/*
-		 * Bit[0] == 1 implies trapped instruction value is
-		 * transformed instruction or custom instruction.
-		 */
-		insn = htinst | INSN_16BIT_MASK;
-	} else {
-		// Not sure how to handle this case,
-		// hopefully we don't get here
-		__hyp_panic();
-	}
-
-	/* Decode length of MMIO */
-	if ((insn & INSN_MASK_LW) == INSN_MATCH_LW) {
-		len = 4;
-	} else if ((insn & INSN_MASK_LB) == INSN_MATCH_LB) {
-		len = 1;
-	} else if ((insn & INSN_MASK_LBU) == INSN_MATCH_LBU) {
-		len = 1;
-#ifdef CONFIG_64BIT
-	} else if ((insn & INSN_MASK_LD) == INSN_MATCH_LD) {
-		len = 8;
-	} else if ((insn & INSN_MASK_LWU) == INSN_MATCH_LWU) {
-		len = 4;
-#endif
-	} else if ((insn & INSN_MASK_LH) == INSN_MATCH_LH) {
-		len = 2;
-	} else if ((insn & INSN_MASK_LHU) == INSN_MATCH_LHU) {
-		len = 2;
-#ifdef CONFIG_64BIT
-	} else if ((insn & INSN_MASK_C_LD) == INSN_MATCH_C_LD) {
-		len = 8;
-	} else if ((insn & INSN_MASK_C_LDSP) == INSN_MATCH_C_LDSP &&
-		   ((insn >> SH_RD) & 0x1f)) {
-		len = 8;
-#endif
-	} else if ((insn & INSN_MASK_C_LW) == INSN_MATCH_C_LW) {
-		len = 4;
-	} else if ((insn & INSN_MASK_C_LWSP) == INSN_MATCH_C_LWSP &&
-		   ((insn >> SH_RD) & 0x1f)) {
-		len = 4;
-	} else {
-		__hyp_panic();
-	}
-	return len;
+	return 4U; // PLIC only reads/writes 4 bytes
 }
 
 static inline bool host_dabt_is_write(void)
@@ -116,20 +66,20 @@ static inline bool host_dabt_is_write(void)
 
 static inline u64 host_get_fault_ipa(phys_addr_t addr)
 {
-	//return (addr | (read_sysreg_hs(far) & ((1 << 12) - 1)));
-	// Not 100% sure this is right
-	return (addr | (csr_read(CSR_STVAL) & 0x3));
+	return ((csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3));
 }
 
 static inline int host_dabt_get_rd(void)
 {
+	/* return 12U; */
 	return SH_RD;
+	/* return SH_RS2C; */
 }
 
 static inline void host_skip_instr(void)
 {
 	u64 val = csr_read(CSR_SEPC);
-	csr_write(CSR_SEPC, val + 4);
+	csr_write(CSR_SEPC, val + 2);
 }
 
 #endif /* __RISCV_VERIFIED_MMIO__ */

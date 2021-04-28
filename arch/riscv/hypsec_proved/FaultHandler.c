@@ -48,8 +48,6 @@ u32 handle_pvops(u32 vmid, u32 vcpuid)
 }
 #endif
 
-static u64 prev_fa = 0;
-
 void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 {
 	u32 ret;
@@ -58,15 +56,9 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
 	set_per_cpu_host_regs((u64)host_regs);
 
-//	TODO (etm): Merge in code to emulate mmio. For now, just assume we have
-//     a normal HvPA fault.
-	map_page_host(addr);
-#if 0 // TEMPORARY
-	ret = emulate_mmio(addr, csr_read(CSR_HTINST));
-	if (ret == V_INVALID)
-	{
-		pr_alert("handle_host_stage2_fault: TODO");
+	/* ret = emulate_mmio(addr, csr_read(CSR_HTINST)); */
+	/* if (ret == V_INVALID) */
+	/* { */
 		map_page_host(addr);
-	}
-#endif
+	/* } */
 }
