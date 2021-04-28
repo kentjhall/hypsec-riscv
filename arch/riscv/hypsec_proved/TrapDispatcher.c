@@ -184,7 +184,7 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 		}
 		else {
 			csr_clear(CSR_SIE, IE_EIE);
-			print_string("EXTERNAL INTERRUPT ALERT\n");
+			csr_set(CSR_HVIP, (1UL << IRQ_S_EXT) << VSIP_TO_HVIP_SHIFT);
 		}
 
 		return;
@@ -205,6 +205,9 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 			else if (hregs->a7 == SBI_EXT_TIME) {
 				csr_clear(CSR_HVIP, 1UL << IRQ_VS_TIMER);
 				csr_set(CSR_SIE, IE_TIE);
+				/* TEMPORARY HACK */
+				csr_clear(CSR_HVIP, 1UL << IRQ_VS_EXT);
+				csr_set(CSR_SIE, IE_EIE);
 			}
 			sr = sbi_ecall(hregs->a7, hregs->a6,
 				       hregs->a0, hregs->a1, hregs->a2,
@@ -227,11 +230,15 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 		break;
 	case EXC_LOAD_PAGE_FAULT:
 		/* DEBUG */
-		panic("Unexpected HS page fault at 0x%lx\n", stval);
+		print_string("Unexpected HS page fault at:\n");
+		printhex_ul(stval);
+		__hyp_panic();
 		break;
 	case EXC_STORE_PAGE_FAULT:
 		/* DEBUG */
-		panic("Unexpected store/AMO access fault at 0x%lx\n", stval);
+		print_string("Unexpected store/AMO access fault at:\n");
+		printhex_ul(stval);
+		__hyp_panic();
 		break;
 	default:
 		pr_info("Unknown scause: %ld, hedeleg: %lx, spv: %lx, spp: %lx, sepc: %lx\n", scause, csr_read(CSR_HEDELEG), csr_read(CSR_HSTATUS) & HSTATUS_SPV, csr_read(CSR_SSTATUS) & SR_SPP, csr_read(CSR_SEPC));
