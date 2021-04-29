@@ -174,18 +174,14 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 	if (scause & CAUSE_IRQ_FLAG) {
 		unsigned long cause = scause & ~CAUSE_IRQ_FLAG;
 
-		if (cause == IRQ_S_TIMER) {
-			csr_clear(CSR_SIE, IE_TIE);
-			csr_set(CSR_HVIP, (1UL << IRQ_S_TIMER) << VSIP_TO_HVIP_SHIFT);
-		}
-		else if (cause == IRQ_S_SOFT) {
+		if (cause == IRQ_S_TIMER)
+			csr_clear(CSR_SIE, IE_TIE); // re-enabled on timer ecall
+		else if (cause == IRQ_S_SOFT)
 			csr_clear(CSR_SIP, 1UL << IRQ_S_SOFT);
-			csr_set(CSR_HVIP, (1UL << IRQ_S_SOFT) << VSIP_TO_HVIP_SHIFT);
-		}
-		else {
-			csr_clear(CSR_SIE, IE_EIE);
-			csr_set(CSR_HVIP, (1UL << IRQ_S_EXT) << VSIP_TO_HVIP_SHIFT);
-		}
+		else
+			csr_clear(CSR_SIE, IE_EIE); // re-enabled in PLIC mmio emulation
+
+		csr_set(CSR_HVIP, (1UL << cause) << VSIP_TO_HVIP_SHIFT);
 
 		return;
 	}
@@ -205,9 +201,6 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 			else if (hregs->a7 == SBI_EXT_TIME) {
 				csr_clear(CSR_HVIP, 1UL << IRQ_VS_TIMER);
 				csr_set(CSR_SIE, IE_TIE);
-				/* TEMPORARY HACK */
-				csr_clear(CSR_HVIP, 1UL << IRQ_VS_EXT);
-				csr_set(CSR_SIE, IE_EIE);
 			}
 			sr = sbi_ecall(hregs->a7, hregs->a6,
 				       hregs->a0, hregs->a1, hregs->a2,

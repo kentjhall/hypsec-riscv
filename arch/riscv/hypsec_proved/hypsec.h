@@ -39,6 +39,12 @@ static inline void __noreturn __hyp_panic(void)
 	for(;;); // just spin, why not
 }
 
+#define hyp_panic() \
+	do {										\
+		print_string("=== " __FILE__ ":" __stringify(__LINE__) " ===\n");	\
+		__hyp_panic();								\
+	} while (0)
+
 static void inline v_panic(void) {
 	//__hyp_panic();
 	u32 vmid = get_cur_vmid();
@@ -852,27 +858,27 @@ void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 /*
  * MmioOps
  */
-u32 emulate_mmio(u64 addr, u32 htinst);
+u32 emulate_mmio(u64 addr);
 
 /*
  * MmioOpsAux
  */
-void handle_host_mmio(u32 htinst);
+void handle_host_mmio(void);
 u32 is_plic_range(u64 addr);
 
 /*
  * MmioCore
  */
-void handle_plic_write(u64 fault_ipa, u32 len);
-void handle_plic_read(u64 fault_ipa, u32 len);
+void handle_plic_write(u64 fault_ipa, u32 len, unsigned long insn);
+void handle_plic_read(u64 fault_ipa, u32 len, unsigned long insn);
 
 /*
  * MmioCoreAux
  */
-void __handle_plic_write(u64 fault_ipa, u32 len);
-void __handle_plic_read(u64 fault_ipa, u32 len);
+void __handle_plic_write(u64 fault_ipa, u32 len, unsigned long insn);
+void __handle_plic_read(u64 fault_ipa, u32 len, unsigned long insn);
 
-u64 host_get_mmio_data(void);
+u64 host_get_mmio_data(unsigned long insn);
 u64 plic_init_pte(u64 prot, u64 paddr);
 u64 plic_get_cbndx(u64 offset);
 

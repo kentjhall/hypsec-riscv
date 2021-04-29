@@ -56,9 +56,9 @@ void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 	addr = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
 	set_per_cpu_host_regs((u64)host_regs);
 
-	/* ret = emulate_mmio(addr, csr_read(CSR_HTINST)); */
-	/* if (ret == V_INVALID) */
-	/* { */
+	ret = emulate_mmio(addr);
+	if (ret == V_INVALID)
+	{
 		map_page_host(addr);
-	/* } */
+	}
 }

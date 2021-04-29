@@ -1,10 +1,10 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
-u64 host_get_mmio_data()
+u64 host_get_mmio_data(unsigned long insn)
 {
 	int rt;
 
-	rt = host_dabt_get_rd();
+	rt = host_dabt_get_rd(insn);
 	return get_host_regs(rt);
 }

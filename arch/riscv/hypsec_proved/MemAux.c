@@ -24,7 +24,11 @@ void map_page_host(u64 addr)
 	 */
 	if (owner == INVALID_MEM || (owner == HOSTVISOR || count > 0U))
 	{
-		perm = pgprot_val(PAGE_WRITE_EXEC);
+		// protect kernel text section (read-only)
+		if (addr >= (unsigned long)__pa_symbol(_start) && addr < (unsigned long)__pa_symbol(__init_text_begin))
+			perm = pgprot_val(PAGE_READ_EXEC);
+		else
+			perm = pgprot_val(PAGE_WRITE_EXEC);
 		new_pte = (pfn << _PAGE_PFN_SHIFT) | perm;
 		/* VA_BITS config option must be set to 39 for 3 level paging */
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
