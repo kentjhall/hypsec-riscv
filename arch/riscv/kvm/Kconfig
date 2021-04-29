@@ -33,4 +33,10 @@ config KVM
 
 	  If unsure, say N.
 
+config KVM_RISCV_PVOPS
+	bool "PVOPS for the guest kernel"
+	help
+	  Adds PVOPS support for the super secure KVM RISCV.
+
+
 endif # VIRTUALIZATION
