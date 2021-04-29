@@ -234,7 +234,8 @@ void handle_host_hs_trap(struct kvm_cpu_context *hregs)
 		__hyp_panic();
 		break;
 	default:
-		pr_info("Unknown scause: %ld, hedeleg: %lx, spv: %lx, spp: %lx, sepc: %lx\n", scause, csr_read(CSR_HEDELEG), csr_read(CSR_HSTATUS) & HSTATUS_SPV, csr_read(CSR_SSTATUS) & SR_SPP, csr_read(CSR_SEPC));
-		break;
+		print_string("Unknown scause:");
+		printhex_ul(scause);
+		__hyp_panic();
 	}
 }
