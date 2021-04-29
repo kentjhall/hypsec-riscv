@@ -95,6 +95,9 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 			register_vcpu((u32)arg1, (u32)arg2);
 			set_host_regs(0, ret);
 			break;
+		case HVC_PHYS_ADDR_IOREMAP:
+			hs_kvm_phys_addr_ioremap((u32)arg1, arg2, arg3, arg4);
+			break;
 		default:
 			print_string("\rUnsupported hvc:\n");
 			printhex_ul(callno);

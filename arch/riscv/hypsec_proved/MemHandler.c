@@ -23,6 +23,7 @@ void __hs_riscv_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index)
 	iommu_assign_page(cbndx, index, pfn, gfn);
 	iommu_map_page(cbndx, index, iova, pte);
 }
+#endif
 
 void hs_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 {
@@ -37,4 +38,3 @@ void hs_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 		n -= 1;
 	}
 }
-#endif

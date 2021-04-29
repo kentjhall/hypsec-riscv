@@ -18,10 +18,19 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/sbi.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #ifdef CONFIG_64BIT
 static unsigned long stage2_mode = (HGATP_MODE_SV39X4 << HGATP_MODE_SHIFT);
+#ifndef CONFIG_VERIFIED_KVM
+/*
+ * Need to comment this out here since it's defined in hypsec_constant.h
+ * as well so that we can use this constant elsewhere.
+ */
 static unsigned long stage2_pgd_levels = 3;
+#endif /* CONFIG_VERIFIED_KVM */
 #define stage2_index_bits	9
 #else
 static unsigned long stage2_mode = (HGATP_MODE_SV32X4 << HGATP_MODE_SHIFT);
@@ -36,6 +45,11 @@ static unsigned long stage2_pgd_levels = 2;
 			 stage2_pgd_xbits)
 #define stage2_gpa_size	((gpa_t)(1ULL << stage2_gpa_bits))
 
+#ifndef CONFIG_VERIFIED_KVM
+/*
+ * Need to comment this out here since it's defined in hypsec_constant.h
+ * as well so that we can use this constant elsewhere.
+ */
 static inline unsigned long stage2_pte_index(gpa_t addr, u32 level)
 {
 	unsigned long mask;
@@ -48,6 +62,7 @@ static inline unsigned long stage2_pte_index(gpa_t addr, u32 level)
 
 	return (addr >> shift) & mask;
 }
+#endif
 
 static inline unsigned long stage2_pte_page_vaddr(pte_t pte)
 {
@@ -376,6 +391,7 @@ void stage2_wp_memory_region(struct kvm *kvm, int slot)
 int stage2_ioremap(struct kvm *kvm, gpa_t gpa, phys_addr_t hpa,
 		   unsigned long size, bool writable)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	pte_t pte;
 	int ret = 0;
 	unsigned long pfn;
@@ -409,7 +425,10 @@ int stage2_ioremap(struct kvm *kvm, gpa_t gpa, phys_addr_t hpa,
 out:
 	stage2_cache_flush(&pcache);
 	return ret;
-
+#else
+	hypsec_phys_addr_ioremap(kvm->arch.vmid.vmid, gpa, hpa, size);
+	return 0;
+#endif
 }
 
 static int handle_hva_to_gpa(struct kvm *kvm,

@@ -140,14 +140,13 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	}
 }
 
-#if 0
 void map_vm_io(u32 vmid, u64 gpa, u64 pa)
 {
 	u64 pte, pfn;
 	u32 owner;
 
 	pfn = pa / PAGE_SIZE;
-	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+	pte = pa + pgprot_val(PAGE_WRITE);
 
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
@@ -158,7 +157,6 @@ void map_vm_io(u32 vmid, u64 gpa, u64 pa)
 	}
 	release_lock_s2page();
 }
-#endif
 
 void grant_vm_page(u32 vmid, u64 pfn)
 {

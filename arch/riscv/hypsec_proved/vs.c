@@ -506,3 +506,8 @@ int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core(HVC_REGISTER_VCPU, vmid, vcpu_id);
 }
+
+void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
+{
+	kvm_call_core(HVC_PHYS_ADDR_IOREMAP, vmid, gpa, pa, size);
+}
