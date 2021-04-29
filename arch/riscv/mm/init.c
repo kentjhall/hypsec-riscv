@@ -568,7 +568,6 @@ static void create_hyp_mappings(unsigned long start, unsigned long end, pgprot_t
 	phys_addr_t pa;
 
 	map_size = best_map_size(start, end - start);
-	pr_alert("start: %lx, end: %lx\n", start, end);
 	for (pa = start; pa < end; pa += map_size) {
 		va = (uintptr_t)__va(pa);
 		create_pgd_mapping(hyp_pg_dir, va, pa,
