@@ -21,6 +21,19 @@
 #define KVM_INTERRUPT_SET	-1U
 #define KVM_INTERRUPT_UNSET	-2U
 
+#ifdef CONFIG_VERIFIED_KVM
+struct kvm_boot_info {
+	__u32 datasize;
+	__u8 *data;
+	__u64 addr;
+};
+
+struct kvm_user_encrypt {
+	__u64 uva;
+	__u64 out_uva;
+};
+#endif
+
 /* for KVM_GET_REGS and KVM_SET_REGS */
 struct kvm_regs {
 };

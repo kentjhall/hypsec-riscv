@@ -1501,6 +1501,7 @@ struct kvm_s390_ucas_mapping {
 /* Available with KVM_CAP_X86_SMM */
 #define KVM_SMI                   _IO(KVMIO,   0xb7)
 #ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_RISCV
 #define KVM_ARM_SET_BOOT_INFO	  _IOR(KVMIO,  0xb8, struct kvm_boot_info)
 #define KVM_ARM_RESUME_INC_EXE    _IO(KVMIO,  0xb9)
 #define KVM_ARM_ENCRYPT_BUF       _IOW(KVMIO,  0xba, struct kvm_user_encrypt)
@@ -1508,7 +1509,16 @@ struct kvm_s390_ucas_mapping {
 #define KVM_ARM_PRE_VCPU	  _IO(KVMIO,  0xbc)
 #define KVM_ARM_GET_VMID    	  _IO(KVMIO,  0xbd)
 #define KVM_ARM_IS_ZERO_PAGE      _IOW(KVMIO,  0xbe, unsigned long)
-#endif
+#else
+#define KVM_RISCV_SET_BOOT_INFO     _IOR(KVMIO,  0xb8, struct kvm_boot_info)
+#define KVM_RISCV_RESUME_INC_EXE    _IO(KVMIO,  0xb9)
+#define KVM_RISCV_ENCRYPT_BUF       _IOW(KVMIO,  0xba, struct kvm_user_encrypt)
+#define KVM_RISCV_DECRYPT_BUF       _IOW(KVMIO,  0xbb, unsigned long)
+#define KVM_RISCV_PRE_VCPU          _IO(KVMIO,  0xbc)
+#define KVM_RISCV_GET_VMID          _IO(KVMIO,  0xbd)
+#define KVM_RISCV_IS_ZERO_PAGE      _IOW(KVMIO,  0xbe, unsigned long)
+#endif /* CONFIG_RISCV */
+#endif /* CONFIG_VERIFIED_KVM */
 /* Available with KVM_CAP_S390_CMMA_MIGRATION */
 #define KVM_S390_GET_CMMA_BITS      _IOWR(KVMIO, 0xb8, struct kvm_s390_cmma_log)
 #define KVM_S390_SET_CMMA_BITS      _IOW(KVMIO, 0xb9, struct kvm_s390_cmma_log)

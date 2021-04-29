@@ -19,6 +19,10 @@
 #include <linux/kvm_host.h>
 #include <asm/csr.h>
 #include <asm/hwcap.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_missing.h>
+#include <asm/hypsec_host.h>
+#endif
 
 struct kvm_stats_debugfs_item debugfs_entries[] = {
 	VCPU_STAT("halt_successful_poll", halt_successful_poll),
@@ -608,6 +612,10 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
 			r = kvm_riscv_vcpu_get_reg(vcpu, &reg);
 		break;
 	}
+	case KVM_RISCV_PRE_VCPU:
+		save_encrypted_vcpu(vcpu);
+		r = 0;
+		break;
 	default:
 		break;
 	}

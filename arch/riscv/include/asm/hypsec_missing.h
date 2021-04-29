@@ -2,12 +2,12 @@ struct kvm* hypsec_vmid_to_kvm(u32 vmid);
 struct kvm_vcpu* hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id);
 struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt(u32 vmid, int vcpu_id);
 
-void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+static inline void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 			       struct shadow_vcpu_context *shadow_ctxt) {};
 
 void update_exception_gp_regs(struct shadow_vcpu_context *shadow_ctxt);
 extern int sec_hs_handle_sys_reg(u32 esr);
-void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+static inline void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 			    struct shadow_vcpu_context *shadow_ctxt, u64 ec) {};
 
 void hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state);

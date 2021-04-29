@@ -74,6 +74,9 @@ struct kvm_arch {
 
 	/* Guest Timer */
 	struct kvm_guest_timer timer;
+#ifdef CONFIG_VERIFIED_KVM
+	bool resume_inc_exe;
+#endif
 };
 
 struct kvm_mmio_decode {
