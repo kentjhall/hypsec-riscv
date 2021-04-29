@@ -63,10 +63,7 @@ static void inline v_panic(void) {
 	((struct hs_thread_info *)riscv_current_is_tp)
 
 void    clear_phys_mem(u64 pfn);
-//u64     get_shared_kvm(u32 vmid);
-//u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
 u32     verify_image(u32 vmid, u32 load_idx, u64 addr);
-///u64     get_sys_reg_desc_val(u32 index);
 u64     get_exception_vector(u64 pstate);
 
 static u64 inline get_shared_kvm(u32 vmid) {
@@ -104,16 +101,6 @@ static void inline mem_load_raw(u64 gfn, u32 reg) {
 
 static void inline mem_store_raw(u64 gfn, u32 reg) {
 }
-/*
-void    acquire_lock_pt(u32 vmid);
-void    release_lock_pt(u32 vmid);
-u64	pool_start(u32 vmid);
-u64	pool_end(u32 vmid);
-u64     pt_load(u32 vmid, u64 addr);
-void    pt_store(u32 vmid, u64 addr, u64 value);
-u64     get_pt_vttbr(u32 vmid);
-void    set_pt_vttbr(u32 vmid, u64 vttbr);
-*/
 
 static void inline acquire_lock_pt(u32 vmid) {
     struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
@@ -201,13 +188,6 @@ static u64 inline pmd_pool_end(u32 vmid) {
 	return pool_start + PT_POOL_PER_VM;
 }
 
-/*
-u32     get_mem_region_cnt(void);
-u64     get_mem_region_base(u32 index);
-u64     get_mem_region_size(u32 index);
-u64     get_mem_region_index(u32 index);
-u64     get_mem_region_flag(u32 index);
-*/
 static u32 inline get_mem_region_cnt(void) {
     	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	return hs_data->regions_cnt;
@@ -231,15 +211,6 @@ static u64 inline get_mem_region_flag(u32 index) {
     	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	return hs_data->regions[index].flags;
 }
-
-/*
-void    acquire_lock_s2page(void);
-void    release_lock_s2page(void);
-u32     get_s2_page_vmid(u64 index);
-void    set_s2_page_vmid(u64 index, u32 vmid);
-u32     get_s2_page_count(u64 index);
-void    set_s2_page_count(u64 index, u32 count);
-*/
 
 static void inline acquire_lock_s2page(void) {
     struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
@@ -281,32 +252,6 @@ static void inline set_s2_page_gfn(u64 index, u64 gfn) {
     hs_data->s2_pages[index].gfn = gfn;
 }
 
-/*
-void    acquire_lock_vm(u32 vmid);
-void    release_lock_vm(u32 vmid);
-u32     get_vm_state(u32 vmid);
-void    set_vm_state(u32 vmid, u32 state);
-u32     get_vcpu_state(u32 vmid, u32 vcpuid);
-void    set_vcpu_state(u32 vmid, u32 vcpuid, u32 state);
-u32     get_vm_power(u32 vmid);
-void    set_vm_power(u32 vmid, u32 power);
-u32     get_vm_inc_exe(u32 vmid);
-void    set_vm_inc_exe(u32 vmid, u32 inc_exe);
-u64     get_vm_kvm(u32 vmid);
-void    set_vm_kvm(u32 vmid, u64 kvm);
-u64     get_vm_vcpu(u32 vmid, u32 vcpuid);
-void    set_vm_vcpu(u32 vmid, u32 vcpuid, u64 vcpu);
-u32     get_vm_next_load_idx(u32 vmid);
-void    set_vm_next_load_idx(u32 vmid, u32 load_idx);
-u64     get_vm_load_addr(u32 vmid, u32 load_idx);
-void    set_vm_load_addr(u32 vmid, u32 load_idx, u64 load_addr);
-u64     get_vm_load_size(u32 vmid, u32 load_idx);
-void    set_vm_load_size(u32 vmid, u32 load_idx, u64 size);
-u64     get_vm_remap_addr(u32 vmid, u32 load_idx);
-void    set_vm_remap_addr(u32 vmid, u32 load_idx, u64 remap_addr);
-u64     get_vm_mapped_pages(u32 vmid, u32 load_idx);
-void    set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped);
-*/
 static void inline acquire_lock_vm(u32 vmid) {
     struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
     stage2_spin_lock(&hs_data->vm_info[vmid].vm_lock);
@@ -437,14 +382,6 @@ static void inline set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped) {
     hs_data->vm_info[vmid].load_info[load_idx].hs_mapped_pages = mapped;
 }
 
-/*
-void    acquire_lock_core(void);
-void    release_lock_core(void);
-u32     get_next_vmid(void);
-void    set_next_vmid(u32 vmid);
-u64     get_next_remap_ptr(void);
-void    set_next_remap_ptr(u64 remap);
-*/
 static void inline acquire_lock_core(void) {
     struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
     stage2_spin_lock(&hs_data->abs_lock);
@@ -475,11 +412,6 @@ static void inline set_next_remap_ptr(u64 remap) {
     hs_data->last_remap_ptr = remap;
 }
 
-//int     get_cur_vmid(void);
-//int     get_cur_vcpuid(void);
-//u64     get_int_gpr(u32 vmid, u32 vcpuid, u32 index);
-//u64     get_int_pc(u32 vmid, u32 vcpuid);
-//u64     get_int_pstate(u32 vmid, u32 vcpuid);
 static u64 inline get_int_gpr(u32 vmid, u32 vcpuid, u32 index) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
@@ -509,7 +441,6 @@ static u64 inline get_int_pstate(u32 vmid, u32 vcpuid) {
 	return vcpu->arch.guest_context.hstatus;
 }
 
-//void	set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value);
 static void inline set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
        struct shared_data *shared_data;
        int offset = VCPU_IDX(vmid, vcpuid);
@@ -526,8 +457,7 @@ void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid);
 void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid);
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
-//u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid);
-//void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value);
+
 static u32 inline get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
     	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
@@ -542,9 +472,7 @@ static void inline set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 	else
 		hs_data->shadow_vcpu_ctxt[offset].dirty = 0;
 }
-//u64     get_int_new_pte(u32 vmid, u32 vcpuid);
-//u32     get_int_new_level(u32 vmid, u32 vcpuid);
-//bool	get_int_writable(u32 vmid, u32 vcpuid);
+
 static bool inline get_int_writable(u32 vmid, u32 vcpuid) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
