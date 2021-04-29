@@ -12,6 +12,9 @@
 #include <linux/hrtimer.h>
 #include <linux/dma-mapping.h>
 #include <xen/xen.h>
+#ifdef CONFIG_KVM_ARM_PVOPS
+#include <kvm/pvops.h>
+#endif
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
@@ -85,7 +88,7 @@ struct vring_desc_extra_packed {
 };
 
 struct vring_virtqueue {
-	struct virtqueue vq;
+struct virtqueue vq;
 
 	/* Is this a packed ring? */
 	bool packed_ring;
@@ -483,7 +486,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			dma_addr_t addr = vring_map_one_sg(vq, sg, DMA_TO_DEVICE);
 			if (vring_mapping_error(vq, addr))
 				goto unmap_release;
-
+#ifdef CONFIG_KVM_ARM_PVOPS
+			kvm_pvops((void *)KVM_SET_DESC_PFN, addr, sg->length, 1);
+#endif
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
@@ -496,7 +501,10 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			dma_addr_t addr = vring_map_one_sg(vq, sg, DMA_FROM_DEVICE);
 			if (vring_mapping_error(vq, addr))
 				goto unmap_release;
-
+#ifdef CONFIG_KVM_ARM_PVOPS
+			virtqueue_touch((void *)__va(addr), sg->length);
+			kvm_pvops((void *)KVM_SET_DESC_PFN, addr, sg->length, 1);
+#endif
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
@@ -514,7 +522,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			DMA_TO_DEVICE);
 		if (vring_mapping_error(vq, addr))
 			goto unmap_release;
-
+#ifdef CONFIG_KVM_ARM_PVOPS
+		kvm_pvops((void *)KVM_SET_DESC_PFN, addr, total_sg * sizeof(struct vring_desc), 1);
+#endif
 		vq->split.vring.desc[head].flags = cpu_to_virtio16(_vq->vdev,
 				VRING_DESC_F_INDIRECT);
 		vq->split.vring.desc[head].addr = cpu_to_virtio64(_vq->vdev,
@@ -631,6 +641,10 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 
 	while (vq->split.vring.desc[i].flags & nextflag) {
 		vring_unmap_one_split(vq, &vq->split.vring.desc[i]);
+#ifdef CONFIG_KVM_ARM_PVOPS
+		kvm_pvops((void *)KVM_UNSET_DESC_PFN,
+			vq->vring.desc[i].addr, vq->vring.desc[i].len);
+#endif
 		i = virtio16_to_cpu(vq->vq.vdev, vq->split.vring.desc[i].next);
 		vq->vq.num_free++;
 	}
@@ -659,9 +673,16 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 			 cpu_to_virtio16(vq->vq.vdev, VRING_DESC_F_INDIRECT)));
 		BUG_ON(len == 0 || len % sizeof(struct vring_desc));
 
-		for (j = 0; j < len / sizeof(struct vring_desc); j++)
+		for (j = 0; j < len / sizeof(struct vring_desc); j++) {
 			vring_unmap_one_split(vq, &indir_desc[j]);
-
+#ifdef CONFIG_KVM_ARM_PVOPS
+			kvm_pvops((void *)KVM_UNSET_DESC_PFN, indir_desc[j].addr, indir_desc[j].len);
+#endif
+		}
+#ifdef CONFIG_KVM_ARM_PVOPS
+		kvm_pvops((void *)KVM_UNSET_DESC_PFN,
+			(dma_addr_t)virt_to_phys(indir_desc), len);
+#endif
 		kfree(indir_desc);
 		vq->split.desc_state[head].indir_desc = NULL;
 	} else if (ctx) {
@@ -898,7 +919,9 @@ static struct virtqueue *vring_create_virtqueue_split(
 				 dma_addr);
 		return NULL;
 	}
-
+#ifdef CONFIG_KVM_ARM_PVOPS
+	kvm_pvops((void *)KVM_SET_DESC_PFN, dma_addr, queue_size_in_bytes, 1);
+#endif
 	to_vvq(vq)->split.queue_dma_addr = dma_addr;
 	to_vvq(vq)->split.queue_size_in_bytes = queue_size_in_bytes;
 	to_vvq(vq)->we_own_ring = true;
@@ -1683,6 +1706,17 @@ err_driver:
 	vring_free_queue(vdev, ring_size_in_bytes, ring, ring_dma_addr);
 err_ring:
 	return NULL;
+}
+
+static void inline virtqueue_touch(void *addr, size_t len)
+{
+	char *ptr = addr;
+	int pgnum = len >> PAGE_SHIFT;
+	do {
+		*ptr = 0;
+		ptr += PAGE_SIZE;
+		pgnum--;
+	} while (pgnum > 0);
 }
 
 

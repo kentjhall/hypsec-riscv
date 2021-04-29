@@ -21,6 +21,10 @@
 #include <linux/magic.h>
 #include <linux/pseudo_fs.h>
 #include <linux/page_reporting.h>
+#ifdef CONFIG_KVM_RISCV_PVOPS
+#include <kvm/pvops.h>
+#endif
+
 
 /*
  * Balloon device works in 4K page units.  So each page is pointed to by
@@ -240,7 +244,9 @@ static unsigned fill_balloon(struct virtio_balloon *vb, size_t num)
 
 	while ((page = balloon_page_pop(&pages))) {
 		balloon_page_enqueue(&vb->vb_dev_info, page);
-
+#ifdef CONFIG_KVM_RISCV_PVOPS
+		kvm_pvops((void *)KVM_SET_BALLOON_PFN, page_to_pfn(page) << PAGE_SHIFT);
+ #endif
 		set_page_pfns(vb, vb->pfns + vb->num_pfns, page);
 		vb->num_pages += VIRTIO_BALLOON_PAGES_PER_PAGE;
 		if (!virtio_has_feature(vb->vdev,
