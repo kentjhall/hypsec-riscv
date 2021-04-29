@@ -430,6 +430,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 	unsigned int i, n, avail, descs_used, prev, err_idx;
 	int head;
 	bool indirect;
+#ifdef CONFIG_KVM_ARM_PVOPS
+	u64 off, addr1;
+#endif
 
 	START_USE(vq);
 
@@ -487,7 +490,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 			if (vring_mapping_error(vq, addr))
 				goto unmap_release;
 #ifdef CONFIG_KVM_ARM_PVOPS
-			kvm_pvops((void *)KVM_SET_DESC_PFN, addr, sg->length, 1);
+			off = addr & (PAGE_SIZE - 1);
+			addr1 = addr - off;
+			kvm_pvops((void *)KVM_SET_DESC_PFN, addr1, sg->length + off, 1);
 #endif
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
@@ -503,7 +508,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 				goto unmap_release;
 #ifdef CONFIG_KVM_ARM_PVOPS
 			virtqueue_touch((void *)__va(addr), sg->length);
-			kvm_pvops((void *)KVM_SET_DESC_PFN, addr, sg->length, 1);
+			off = addr & (PAGE_SIZE - 1);
+			addr1 = addr - off;
+			kvm_pvops((void *)KVM_SET_DESC_PFN, addr1, sg->length + off, 1);
 #endif
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
@@ -523,7 +530,9 @@ static inline int virtqueue_add_split(struct virtqueue *_vq,
 		if (vring_mapping_error(vq, addr))
 			goto unmap_release;
 #ifdef CONFIG_KVM_ARM_PVOPS
-		kvm_pvops((void *)KVM_SET_DESC_PFN, addr, total_sg * sizeof(struct vring_desc), 1);
+		off = addr & (PAGE_SIZE - 1);
+		addr1 = addr - off;
+		kvm_pvops((void *)KVM_SET_DESC_PFN, addr1, (total_sg * sizeof(struct vring_desc)) + off, 1);
 #endif
 		vq->split.vring.desc[head].flags = cpu_to_virtio16(_vq->vdev,
 				VRING_DESC_F_INDIRECT);
@@ -632,6 +641,9 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 {
 	unsigned int i, j;
 	__virtio16 nextflag = cpu_to_virtio16(vq->vq.vdev, VRING_DESC_F_NEXT);
+#ifdef CONFIG_KVM_ARM_PVOPS
+	u64 off, addr1;
+#endif
 
 	/* Clear data ptr. */
 	vq->split.desc_state[head].data = NULL;
@@ -642,8 +654,10 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 	while (vq->split.vring.desc[i].flags & nextflag) {
 		vring_unmap_one_split(vq, &vq->split.vring.desc[i]);
 #ifdef CONFIG_KVM_ARM_PVOPS
+		off = vq->vring.desc[i].addr & (PAGE_SIZE - 1);
+ 		addr1 = vq->vring.desc[i].addr - off;
 		kvm_pvops((void *)KVM_UNSET_DESC_PFN,
-			vq->vring.desc[i].addr, vq->vring.desc[i].len);
+			addr1, vq->vring.desc[i].len + off);
 #endif
 		i = virtio16_to_cpu(vq->vq.vdev, vq->split.vring.desc[i].next);
 		vq->vq.num_free++;
@@ -676,12 +690,17 @@ static void detach_buf_split(struct vring_virtqueue *vq, unsigned int head,
 		for (j = 0; j < len / sizeof(struct vring_desc); j++) {
 			vring_unmap_one_split(vq, &indir_desc[j]);
 #ifdef CONFIG_KVM_ARM_PVOPS
-			kvm_pvops((void *)KVM_UNSET_DESC_PFN, indir_desc[j].addr, indir_desc[j].len);
+			off = indir_desc[j].addr & (PAGE_SIZE - 1);
+			addr1 = indir_desc[j].addr - off;
+			kvm_pvops((void *)KVM_UNSET_DESC_PFN, indir_desc[j].addr, indir_desc[j].len + off);
 #endif
 		}
 #ifdef CONFIG_KVM_ARM_PVOPS
+		u64 addr = (dma_addr_t)virt_to_phys(indir_desc);
+		off =  addr & (PAGE_SIZE - 1);
+		addr1 = addr - off;
 		kvm_pvops((void *)KVM_UNSET_DESC_PFN,
-			(dma_addr_t)virt_to_phys(indir_desc), len);
+			addr1, len + off);
 #endif
 		kfree(indir_desc);
 		vq->split.desc_state[head].indir_desc = NULL;
