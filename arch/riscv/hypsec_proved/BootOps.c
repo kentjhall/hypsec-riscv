@@ -4,6 +4,8 @@
  * BootOps
  */
 
+#if 0
+
 //TODO: change function name to search_load_info
 u64 search_load_info(u32 vmid, u64 addr)
 {
@@ -63,6 +65,7 @@ void set_vcpu_inactive(u32 vmid, u32 vcpuid)
 	}
 	release_lock_vm(vmid);
 }
+#endif
 
 void register_vcpu(u32 vmid, u32 vcpuid)
 {
@@ -102,7 +105,8 @@ u32 register_kvm()
 		set_vm_kvm(vmid, kvm);
 		set_vm_state(vmid, READY);
 		//TODO: can we remove the following?
-		set_vm_public_key(vmid);
+		/* TODO (etm): need this function from AbstactMachine.c */
+//		set_vm_public_key(vmid);
 		//TODO: can we remove the following?
 	}
 	else
@@ -134,7 +138,8 @@ u32 set_boot_info(u32 vmid, u64 load_addr, u64 size)
 			set_vm_load_size(vmid, load_idx, size);
 			set_vm_remap_addr(vmid, load_idx, remap_addr);
 			set_vm_mapped_pages(vmid, load_idx, 0U);
-			set_vm_load_signature(vmid, load_idx);
+			/* TODO (etm): Need function from AbstractMachine.c */
+//			set_vm_load_signature(vmid, load_idx);
 		}
 	}
 	else
@@ -165,7 +170,7 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 			if (mapped < page_count)
 			{
 				mmap_s2pt(COREVISOR, target, 3UL,
-					pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
+					pfn * PAGE_SIZE + pgprot_val(PAGE_WRITE));
 				set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
 			}
 		}
@@ -178,6 +183,7 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 	release_lock_vm(vmid);
 }
 
+#if 0
 void verify_and_load_images(u32 vmid)
 {
 	u32 state, load_info_cnt, load_idx, valid;
@@ -211,6 +217,7 @@ void verify_and_load_images(u32 vmid)
 	release_lock_vm(vmid);
 }
 
+#if 0 /* No IOMMU in RISCV */
 void alloc_iommu(u32 vmid, u32 cbndx, u32 index) 
 {
 	u32 state;
@@ -281,6 +288,7 @@ void clear_iommu(u32 vmid, u32 cbndx, u32 index, u64 iova)
 	unmap_iommu_page(cbndx, index, iova);
 	release_lock_vm(vmid);
 }
+#endif
 
 void map_io(u32 vmid, u64 gpa, u64 pa)
 {
@@ -390,3 +398,4 @@ void __hs_decrypt_buf(u32 vmid, void *buf, u32 len)
 
 	release_lock_vm(vmid);
 }
+#endif

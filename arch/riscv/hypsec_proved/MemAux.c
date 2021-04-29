@@ -40,7 +40,6 @@ void map_page_host(u64 addr)
 	}
 	release_lock_s2page();
 }
-#if 0
 void clear_vm_page(u32 vmid, u64 pfn)
 {
 	u32 owner;
@@ -53,7 +52,8 @@ void clear_vm_page(u32 vmid, u64 pfn)
 		set_pfn_owner(pfn, HOSTVISOR);
 		set_pfn_count(pfn, 0U);
 		set_pfn_map(pfn, 0UL);
-		clear_phys_page(pfn);
+		/* TODO (etm): We need to clear the page - fn in AbstractMachine.c */
+//		clear_phys_page(pfn);
 		__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	}
 	release_lock_s2page();
@@ -121,12 +121,16 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 
 	paddr = phys_page(pte);
 	/* We give the VM RWX permission now. */
-	perm = pgprot_val(PAGE_S2_KERNEL);
+	perm = pgprot_val(PAGE_WRITE_EXEC);
 
 	if (level == 2U)
 	{
 		pte = paddr | perm;
-		pte &= ~PMD_TABLE_BIT;
+		/*
+		 * TODO(etm): I think on ARM this is setting a huge page.
+		 * 	On RISCV there's nothing special to do.
+		 */
+		/* ARM: pte &= ~PMD_TABLE_BIT; */
 		mmap_s2pt(vmid, addr, 2U, pte);
 	}
 	else if (level == 3U)
@@ -136,6 +140,7 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	}
 }
 
+#if 0
 void map_vm_io(u32 vmid, u64 gpa, u64 pa)
 {
 	u64 pte, pfn;
@@ -153,6 +158,7 @@ void map_vm_io(u32 vmid, u64 gpa, u64 pa)
 	}
 	release_lock_s2page();
 }
+#endif
 
 void grant_vm_page(u32 vmid, u64 pfn)
 {
@@ -184,7 +190,6 @@ void revoke_vm_page(u32 vmid, u64 pfn)
 	}
 	release_lock_s2page();
 }
-#endif
 
 void assign_pfn_to_iommu(u32 vmid, u64 gfn, u64 pfn)
 {

@@ -305,7 +305,7 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 
 //TODO: Define the following
 static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-        struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
+	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//hs_data->shadow_vcpu_ctxt[offset].regs[index] = value;
 	if (index < 35)

@@ -73,9 +73,32 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 	ret64 = 0;
 	callno = hr->a0;
 
-	if (callno == HVC_ENABLE_S2_TRANS)
-	{
-		hvc_enable_s2_trans();
+	switch (callno) {
+		case HVC_ENABLE_S2_TRANS:
+			hvc_enable_s2_trans();
+			break;
+		case HVC_CLEAR_VM_S2_RANGE:
+			hs_clear_vm_stage2_range((u32)arg1, arg2, arg3);
+			break;
+		case HVC_SET_BOOT_INFO:
+			ret = set_boot_info((u32)arg1, arg2, arg3);
+			set_host_regs(0, ret);
+			break;
+		case HVC_REMAP_VM_IMAGE:
+			remap_vm_image((u32)arg1, arg2, (u32)arg3);
+			break;
+		case HVC_REGISTER_KVM:
+			ret = register_kvm();
+			set_host_regs(0, ret);
+			break;
+		case HVC_REGISTER_VCPU:
+			register_vcpu((u32)arg1, (u32)arg2);
+			set_host_regs(0, ret);
+			break;
+		default:
+			print_string("\rUnsupported hvc:\n");
+			printhex_ul(callno);
+			__hyp_panic();
 	}
 #if 0 // TEMPORARY
 	else if (callno == HVC_VCPU_RUN)

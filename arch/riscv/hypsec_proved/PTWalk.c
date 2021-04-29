@@ -94,10 +94,6 @@ u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
 	return check64(ret);
 }
 
-/* TODO (etm): these bits are reserved by the ISA, but free for us to use */
-#define PMD_MARK 1UL << 55
-#define PTE_MARK 1UL << 56
-
 void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 {
 	u64 pud_pa, pmd_idx;
@@ -105,10 +101,8 @@ void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 //	pud_pa = phys_page(pud);
 	pud_pa = (pud >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
 	pmd_idx = pmd_idx(addr);
-	//TODO: this is for grant/revoke OPT
-	// If we turn this on we need to clear this bit before using the PPN
-	// in each PTE
-//	pmd |= PMD_MARK;
+	//NB: this is for grant/revoke OPT
+	pmd |= PMD_MARK;
 	pt_store(vmid, pud_pa | (pmd_idx * 8UL), pmd);
 }
 
@@ -118,10 +112,8 @@ void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
 //	pmd_pa = phys_page(pmd);
 	pmd_pa = (pmd >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
 	pte_idx = pte_idx(addr);
-	//TODO: this is for grant/revoke OPT
-	// If we turn this on we need to clear this bit before using the PPN
-	// in each PTE
-//	pte |= PTE_MARK;
+	//NB: this is for grant/revoke OPT
+	pte |= PTE_MARK;
 
 	pt_store(vmid, pmd_pa | (pte_idx * 8UL), pte);
 }

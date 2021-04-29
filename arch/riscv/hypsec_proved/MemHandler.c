@@ -11,6 +11,8 @@ void hs_clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 	}
 }
 
+/* (etm): I think this is irrelevant for RISCV */
+#if 0
 void __hs_riscv_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index)
 {
 	u64 pfn, gfn, pte;
@@ -35,3 +37,4 @@ void hs_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 		n -= 1;
 	}
 }
+#endif

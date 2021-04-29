@@ -24,6 +24,12 @@
 #define _PAGE_DIRTY     (1 << 7)    /* Set by hardware on any write */
 #define _PAGE_SOFT      (1 << 8)    /* Reserved for software */
 
+#ifdef CONFIG_VERIFIED_KVM
+/* These bits are reserved for software so we can use them here */
+#define PMD_MARK (1 << 8)
+#define PTE_MARK (1 << 9)
+#endif
+
 #define _PAGE_SPECIAL   _PAGE_SOFT
 #define _PAGE_TABLE     _PAGE_PRESENT
 #define _PAGE_LEAF      (_PAGE_READ | _PAGE_WRITE | _PAGE_EXEC)
