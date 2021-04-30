@@ -112,6 +112,33 @@ void kvm_arch_hardware_disable(void)
 	csr_write(CSR_HIDELEG, 0);
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+struct kvm* hypsec_arch_alloc_vm(void)
+{
+	struct kvm *kvm;
+	int vmid = hypsec_register_kvm();
+	BUG_ON(vmid <= 0);
+	kvm = hypsec_alloc_vm(vmid);
+	kvm->arch.vmid.vmid = (u32)vmid;
+	return kvm;
+}
+
+struct kvm *kvm_arch_alloc_vm(void)
+{
+	return hypsec_arch_alloc_vm();
+}
+
+void kvm_arch_free_vm(struct kvm *kvm)
+{
+#ifndef CONFIG_VERIFIED_KVM
+	if (!has_vhe())
+		kfree(kvm);
+	else
+		vfree(kvm);
+#endif
+}
+#endif
+
 int kvm_arch_init(void *opaque)
 {
 #ifndef CONFIG_VERIFIED_KVM

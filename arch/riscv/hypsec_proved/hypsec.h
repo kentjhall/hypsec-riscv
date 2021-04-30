@@ -33,8 +33,17 @@ static u64 inline check64(u64 val) {
 
 static inline void __noreturn __hyp_panic(void)
 {
-	print_string("SEPC:\n");
-	printhex_ul(csr_read(CSR_SEPC));
+	u32 vmid = get_cur_vmid();
+	u32 vcpuid = get_cur_vcpu_id();
+	if (vmid) {
+		print_string("\rvm\n");
+		printhex_ul(get_shadow_ctxt(vmid, vcpuid, V_PC));
+	} else {
+		print_string("\rhost\n");
+		printhex_ul(csr_read(CSR_SEPC));
+	}
+	print_string("scause:\n");
+	printhex_ul(csr_read(CSR_SCAUSE));
 	print_string("Panic in HS mode! Spinning forever now...\n");
 	for(;;); // just spin, why not
 }
@@ -45,19 +54,7 @@ static inline void __noreturn __hyp_panic(void)
 		__hyp_panic();								\
 	} while (0)
 
-static void inline v_panic(void) {
-	//__hyp_panic();
-	u32 vmid = get_cur_vmid();
-	u32 vcpuid = get_cur_vcpu_id();
-	if (vmid) {
-		print_string("\rvm\n");
-		printhex_ul(get_shadow_ctxt(vmid, vcpuid, V_PC));
-	} else {
-		print_string("\rhost\n");
-		printhex_ul(csr_read(CSR_SEPC));
-	}
-	printhex_ul(csr_read(CSR_SCAUSE));
-}
+#define v_panic() hyp_panic()
 
 void    clear_phys_mem(u64 pfn);
 u32     verify_image(u32 vmid, u32 load_idx, u64 addr);

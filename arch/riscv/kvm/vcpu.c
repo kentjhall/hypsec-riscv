@@ -179,7 +179,12 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 	/* Reset VCPU */
 	kvm_riscv_reset_vcpu(vcpu);
 
+#ifdef CONFIG_VERIFIED_KVM
+	vcpu->arch.vmid = vcpu->kvm->arch.vmid.vmid;
+	return hypsec_register_vcpu(vcpu->kvm->arch.vmid.vmid, vcpu->vcpu_id);
+#else
 	return 0;
+#endif
 }
 
 int kvm_arch_vcpu_setup(struct kvm_vcpu *vcpu)
