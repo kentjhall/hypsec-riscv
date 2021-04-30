@@ -121,7 +121,12 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	{
 		v_panic();
 	}
-	__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
+	/*
+	 * TODO (etm): Calling this crashes the kernel due to a hypsec page fault
+	 *  I think it has something to do with the new linker script since
+	 *  calling other non-hypsec symbols results in page faults as well.
+	 */
+	//__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	release_lock_s2page();
 }
 
