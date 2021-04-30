@@ -108,8 +108,10 @@ int kvm_arch_hardware_enable(void)
 
 void kvm_arch_hardware_disable(void)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	csr_write(CSR_HEDELEG, 0);
 	csr_write(CSR_HIDELEG, 0);
+#endif
 }
 
 #ifdef CONFIG_VERIFIED_KVM
