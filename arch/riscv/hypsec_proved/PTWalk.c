@@ -10,7 +10,7 @@ u64 walk_pgd(u32 vmid, u64 hgatp, u64 addr, u32 alloc)
 	u64 hgatp_pa, ret, pgd_idx, pgd, pgd_pa;
 
 	ret = 0UL;
-	hgatp_pa = phys_page(hgatp & HGATP_PPN);
+	hgatp_pa = (hgatp & HGATP_PPN) << PAGE_SHIFT;
 	if (vmid == COREVISOR)
 	{
 		pgd_idx = pgd_index(addr);
@@ -62,8 +62,7 @@ u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc)
 	ret = 0UL;
 	if (pud != 0UL)
 	{
-//		pud_pa = phys_page(pud);
-		pud_pa = (pud >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
+		pud_pa = phys_page(pud);
 		pmd_idx = pmd_idx(addr);
 
 		pmd = pt_load(vmid, pud_pa | (pmd_idx * 8));
@@ -86,8 +85,7 @@ u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
 	ret = 0UL;
 	if (pmd != 0UL)
 	{
-//		pmd_pa = phys_page(pmd);
-		pmd_pa = (pmd >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
+		pmd_pa = phys_page(pmd);
 		pte_idx = pte_idx(addr);
 		ret = pt_load(vmid, pmd_pa | (pte_idx * 8UL));
 	}
@@ -98,8 +96,7 @@ void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 {
 	u64 pud_pa, pmd_idx;
 
-//	pud_pa = phys_page(pud);
-	pud_pa = (pud >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
+	pud_pa = phys_page(pud);
 	pmd_idx = pmd_idx(addr);
 	//NB: this is for grant/revoke OPT
 	pmd |= PMD_MARK;
@@ -109,8 +106,7 @@ void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd)
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
 {
 	u64 pmd_pa, pte_idx;
-//	pmd_pa = phys_page(pmd);
-	pmd_pa = (pmd >> _PAGE_PFN_SHIFT) << PAGE_SHIFT;
+	pmd_pa = phys_page(pmd);
 	pte_idx = pte_idx(addr);
 	//NB: this is for grant/revoke OPT
 	pte |= PTE_MARK;
