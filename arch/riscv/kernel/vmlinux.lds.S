@@ -43,6 +43,11 @@ SECTIONS
 		ENTRY_TEXT
 		IRQENTRY_TEXT
 		SOFTIRQENTRY_TEXT
+#ifdef CONFIG_VERIFIED_KVM
+		__hyp_text_start = .;
+		*(.hyp.text)
+		__hyp_text_end = .;
+#endif
 		*(.fixup)
 		_etext = .;
 	}

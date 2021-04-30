@@ -71,17 +71,15 @@ guest:
 	return true;
 }
 
-static void __host_hs_restore_state(struct hs_data *hs_data)
+static void kvm_riscv_vcpu_timer_restore(struct kvm_vcpu *vcpu)
 {
-	csr_write(CSR_HGATP, get_pt_hgatp(hs_data->host_hgatp));
-	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
-	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
+	struct kvm_guest_timer *gt = &vcpu->kvm->arch.timer;
 
 #ifdef CONFIG_64BIT
-	csr_write(CSR_HTIMEDELTA, 0);
+	csr_write(CSR_HTIMEDELTA, gt->time_delta);
 #else
-	csr_write(CSR_HTIMEDELTA, 0);
-	csr_write(CSR_HTIMEDELTAH, 0);
+	csr_write(CSR_HTIMEDELTA, (u32)(gt->time_delta));
+	csr_write(CSR_HTIMEDELTAH, (u32)(gt->time_delta >> 32));
 #endif
 }
 
@@ -130,6 +128,20 @@ static void kvm_riscv_vcpu_host_fp_restore(struct kvm_cpu_context *cntx)
 		__kvm_riscv_fp_d_restore(cntx);
 	else if (riscv_isa_extension_available(NULL, f))
 		__kvm_riscv_fp_f_restore(cntx);
+}
+
+static void __host_hs_restore_state(struct hs_data *hs_data)
+{
+	csr_write(CSR_HGATP, get_pt_hgatp(hs_data->host_hgatp));
+	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
+	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
+
+#ifdef CONFIG_64BIT
+	csr_write(CSR_HTIMEDELTA, 0);
+#else
+	csr_write(CSR_HTIMEDELTA, 0);
+	csr_write(CSR_HTIMEDELTAH, 0);
+#endif
 }
 
 /* Switch to the guest with hypsec */

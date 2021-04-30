@@ -25,7 +25,11 @@ void map_page_host(u64 addr)
 	if (owner == INVALID_MEM || (owner == HOSTVISOR || count > 0U))
 	{
 		// protect kernel text section (read-only)
-		perm = pgprot_val(PAGE_WRITE_EXEC);
+		if (addr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
+		    addr < (unsigned long)__pa_symbol(__hyp_text_end))
+			perm = pgprot_val(PAGE_READ);
+		else
+			perm = pgprot_val(PAGE_WRITE_EXEC);
 		new_pte = (pfn << _PAGE_PFN_SHIFT) | perm;
 		/* VA_BITS config option must be set to 39 for 3 level paging */
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
@@ -33,7 +37,9 @@ void map_page_host(u64 addr)
 	else
 	{
 		/* Time to freak out */
-		panic("\rfaults on host\n");
+		print_string("addr:\n");
+		printhex_ul(addr);
+		v_panic();
 	}
 	release_lock_s2page();
 }
@@ -125,7 +131,11 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 
 	paddr = phys_page(pte);
 	/* We give the VM RWX permission now. */
-	perm = pgprot_val(PAGE_WRITE_EXEC);
+	if (addr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
+	    addr < (unsigned long)__pa_symbol(__hyp_text_end))
+		perm = pgprot_val(PAGE_READ);
+	else
+		perm = pgprot_val(PAGE_WRITE_EXEC);
 
 	if (level == 2U)
 	{

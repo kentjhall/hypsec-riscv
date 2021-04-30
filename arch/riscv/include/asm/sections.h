@@ -12,6 +12,7 @@ extern char _start_kernel[];
 extern char __init_data_begin[], __init_data_end[];
 extern char __init_text_begin[], __init_text_end[];
 #ifdef CONFIG_VERIFIED_KVM
+extern char __hyp_text_start[], __hyp_text_end[];
 extern char _early_end[];
 extern char stage2_pgs_start[];
 extern char stage2_pgs_end[];

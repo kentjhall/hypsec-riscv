@@ -13,8 +13,6 @@ kvm-objs += main.o vm.o vmid.o tlb.o mmu.o
 kvm-objs += vcpu.o vcpu_exit.o vcpu_timer.o vcpu_sbi.o
 ifneq ($(CONFIG_VERIFIED_KVM), y)
 	kvm-objs += vcpu_switch.o
-else
-	kvm-objs += vcpu_switch_shadow.o vcpu_run.o host.o
 endif
 
 obj-$(CONFIG_KVM)	+= kvm.o
