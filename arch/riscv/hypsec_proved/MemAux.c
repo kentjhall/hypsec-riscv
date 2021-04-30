@@ -24,7 +24,7 @@ void map_page_host(u64 addr)
 	 */
 	if (owner == INVALID_MEM || (owner == HOSTVISOR || count > 0U))
 	{
-		// protect kernel text section (read-only)
+		/* protect hypsec text section (read-only) */
 		if (addr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
 		    addr < (unsigned long)__pa_symbol(__hyp_text_end))
 			perm = pgprot_val(PAGE_READ);
@@ -129,12 +129,13 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 {
 	u64 paddr, perm;
 
-	paddr = phys_page(pte);
-	/* We give the VM RWX permission now. */
+	paddr = phys_page(pte);	
+	/* protect hypsec text section (read-only) */
 	if (addr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
 	    addr < (unsigned long)__pa_symbol(__hyp_text_end))
 		perm = pgprot_val(PAGE_READ);
-	else
+	/* We give the VM RWX permission now. */
+	else 
 		perm = pgprot_val(PAGE_WRITE_EXEC);
 
 	if (level == 2U)
