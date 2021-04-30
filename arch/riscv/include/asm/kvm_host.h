@@ -13,8 +13,10 @@
 #include <linux/kvm.h>
 #include <linux/kvm_types.h>
 #include <asm/kvm_vcpu_timer.h>
-#ifdef CONFIG_VERIFIED_KVM
+#if defined (CONFIG_VERIFIED_KVM) || defined (CONFIG_KVM_RISCV_PVOPS)
 #include <asm/sbi.h>
+#endif
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_mmu.h>
 #endif
 
@@ -250,7 +252,7 @@ struct kvm_vcpu_arch {
 	int srcu_idx;
 };
 
-#ifdef CONFIG_VERIFIED_KVM
+#if defined (CONFIG_VERIFIED_KVM) || defined (CONFIG_KVM_RISCV_PVOPS)
 #define __get_7th_arg(arg1, arg2, arg3, arg4, arg5, arg6, arg7, ...) arg7
 
 #define __hvc_ecall_0(...) \

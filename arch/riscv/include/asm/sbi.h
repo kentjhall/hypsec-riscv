@@ -22,7 +22,7 @@ enum sbi_ext_id {
 	SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID = 0x7,
 	SBI_EXT_0_1_SHUTDOWN = 0x8,
 #endif
-#ifdef CONFIG_VERIFIED_KVM
+#if defined (CONFIG_VERIFIED_KVM) || defined (CONFIG_KVM_RISCV_PVOPS)
 	SBI_EXT_HYPSEC_HVC,
 #endif
 	SBI_EXT_BASE = 0x10,
