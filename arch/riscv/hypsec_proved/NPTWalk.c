@@ -70,7 +70,7 @@ u64 walk_npt(u32 vmid, u64 addr)
 	pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-	if ((pmd & pgprot_val(PAGE_LEAF)) != 0U)
+	if ((pmd & pgprot_val(PAGE_LEAF)) == 0U)
 	{
 		pte = walk_pte(vmid, pmd, addr);
 		ret = pte;
@@ -104,9 +104,10 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	{
 		pmd = walk_pmd(vmid, pud, addr, 0U);
 		//TODO: Xupeng, why we don't check this in the verified code
-		if ((pmd & pgprot_val(PAGE_LEAF)) == 0U)
+		if ((pmd & pgprot_val(PAGE_TABLE)) == 1U)
 		{
-			panic("\rset existing npt: pmd\n");
+			print_string("PANIC: set existing npt: pmd\n");
+			hyp_panic();
 		}
 		else
 		{
@@ -122,7 +123,8 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 		}
 		else
 		{
-			panic("\rset existing npt: pte\n");
+			print_string("PANIC: set existing npt: pte\n");
+			hyp_panic();
 		}
 	}
 }
