@@ -40,6 +40,14 @@ void map_page_host(u64 addr)
 	}
 	release_lock_s2page();
 }
+
+/* TODO: I yanked this from AbstractMachine.c */
+void clear_phys_page(unsigned long pfn)
+{
+	u64 addr = (u64)__hs_va(pfn << PAGE_SHIFT);
+	hs_memset((void *)addr, 0, PAGE_SIZE);
+}
+
 void clear_vm_page(u32 vmid, u64 pfn)
 {
 	u32 owner;
@@ -52,8 +60,7 @@ void clear_vm_page(u32 vmid, u64 pfn)
 		set_pfn_owner(pfn, HOSTVISOR);
 		set_pfn_count(pfn, 0U);
 		set_pfn_map(pfn, 0UL);
-		/* TODO (etm): We need to clear the page - fn in AbstractMachine.c */
-//		clear_phys_page(pfn);
+		clear_phys_page(pfn);
 		__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	}
 	release_lock_s2page();
