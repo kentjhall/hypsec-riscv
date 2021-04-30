@@ -168,7 +168,7 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 			if (mapped < page_count)
 			{
 				mmap_s2pt(COREVISOR, target, 3UL,
-					pfn * PAGE_SIZE + pgprot_val(PAGE_WRITE));
+					(pfn << _PAGE_PFN_SHIFT) + pgprot_val(PAGE_WRITE));
 				set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
 			}
 		}

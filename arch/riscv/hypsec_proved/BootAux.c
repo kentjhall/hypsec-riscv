@@ -14,9 +14,10 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
 
 	while (mb_num > 0UL)
 	{
+		/* TODO: Tidy this up... */
 		pte = walk_s2pt(COREVISOR, remap_addr);
 		pa = phys_page(pte);
-		pfn = phys_page(pte) / PMD_SIZE * PTRS_PER_PMD;
+		pfn = pa >> PAGE_SHIFT;
 		gfn = start / PAGE_SIZE;
 		if (pfn == 0UL)
 		{
@@ -24,7 +25,7 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
 		}
 		else
 		{
-			prot_and_map_vm_s2pt(vmid, gfn * PAGE_SIZE, pfn * PAGE_SIZE, 2U);
+			prot_and_map_vm_s2pt(vmid, gfn * PAGE_SIZE, pte, 2U);
 		}
 		start += PMD_SIZE;
 		remap_addr = remap_addr + (start - target_addr);
