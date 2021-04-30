@@ -183,7 +183,6 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 
 void verify_and_load_images(u32 vmid)
 {
-#if 0
 	u32 state, load_info_cnt, load_idx, valid;
 	u64 load_addr, remap_addr, mapped;
 
@@ -199,7 +198,11 @@ void verify_and_load_images(u32 vmid)
 			remap_addr = get_vm_remap_addr(vmid, load_idx);
 			mapped = get_vm_mapped_pages(vmid, load_idx);
 			unmap_and_load_vm_image(vmid, load_addr, remap_addr, mapped);
+#if 0 // TEMPORARY
 			valid = verify_image(vmid, load_idx, remap_addr);
+#else
+			valid = 1;
+#endif
 			if (valid == 0U)
 			{
 				v_panic();
@@ -213,7 +216,6 @@ void verify_and_load_images(u32 vmid)
 		v_panic();
 	}
 	release_lock_vm(vmid);
-#endif
 }
 
 #if 0 /* No IOMMU in RISCV */

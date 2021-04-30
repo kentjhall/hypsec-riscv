@@ -907,6 +907,22 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 #endif
 	struct kvm_run *run = vcpu->run;
 
+#ifdef CONFIG_VERIFIED_KVM
+	struct kvm *kvm = vcpu->kvm;
+
+	if (!vcpu->arch.ran_atleast_once) {
+		spin_lock(&kvm->hypsec_lock);
+		if (!kvm->verified) {
+			ret = hs_verify_and_load_images(kvm->arch.vmid.vmid);
+			kvm->verified = true;
+		}
+
+		if (kvm->arch.resume_inc_exe)
+			load_encrypted_vcpu(kvm->arch.vmid.vmid, vcpu->vcpu_id);
+		spin_unlock(&kvm->hypsec_lock);
+	}
+#endif
+
 	/* Mark this VCPU ran at least once */
 	vcpu->arch.ran_atleast_once = true;
 
