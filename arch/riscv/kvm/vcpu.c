@@ -612,10 +612,12 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
 			r = kvm_riscv_vcpu_get_reg(vcpu, &reg);
 		break;
 	}
+#ifdef CONFIG_VERIFIED_KVM
 	case KVM_RISCV_PRE_VCPU:
 		save_encrypted_vcpu(vcpu);
 		r = 0;
 		break;
+#endif
 	default:
 		break;
 	}
