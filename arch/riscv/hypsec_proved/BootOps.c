@@ -181,9 +181,9 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 	release_lock_vm(vmid);
 }
 
-#if 0
 void verify_and_load_images(u32 vmid)
 {
+#if 0
 	u32 state, load_info_cnt, load_idx, valid;
 	u64 load_addr, remap_addr, mapped;
 
@@ -213,8 +213,8 @@ void verify_and_load_images(u32 vmid)
 		v_panic();
 	}
 	release_lock_vm(vmid);
-}
 #endif
+}
 
 #if 0 /* No IOMMU in RISCV */
 void alloc_iommu(u32 vmid, u32 cbndx, u32 index) 

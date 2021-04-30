@@ -118,6 +118,7 @@ struct kvm* hypsec_arch_alloc_vm(void)
 	struct kvm *kvm;
 	int vmid = hypsec_register_kvm();
 	BUG_ON(vmid <= 0);
+	pr_alert("hypsec_register_kvm returned %d\n", vmid);
 	kvm = hypsec_alloc_vm(vmid);
 	kvm->arch.vmid.vmid = (u32)vmid;
 	return kvm;
@@ -130,12 +131,6 @@ struct kvm *kvm_arch_alloc_vm(void)
 
 void kvm_arch_free_vm(struct kvm *kvm)
 {
-#ifndef CONFIG_VERIFIED_KVM
-	if (!has_vhe())
-		kfree(kvm);
-	else
-		vfree(kvm);
-#endif
 }
 #endif
 
