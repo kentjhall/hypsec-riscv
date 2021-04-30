@@ -115,7 +115,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 			id = hs_set_boot_info(kvm->arch.vmid.vmid, info.addr, info.datasize, 0);
 			for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
 
-				npages = get_user_pages_fast_only(virt_addr, 1, FOLL_WRITE, page);
+				npages = get_user_pages(virt_addr, 1, FOLL_WRITE, page, NULL);
 				if (npages == 1)
 					hs_remap_vm_image(kvm->arch.vmid.vmid, page_to_pfn(page[0]), id);
 				else
