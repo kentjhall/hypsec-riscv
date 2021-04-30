@@ -13,20 +13,24 @@
 
 #include "hypsec.h"
 
-#if 0 // TEMPORARY
 u32 handle_pvops(u32 vmid, u32 vcpuid)
 {
 	u32 ret;
-	u64 call_num, addr, size;
+	u64 sbi_num, call_num, addr, size;
 
-	call_num  = get_shadow_ctxt(vmid, vcpuid, 0);
-	addr = get_shadow_ctxt(vmid, vcpuid, 1);
-	size = get_shadow_ctxt(vmid, vcpuid, 2);
+	sbi_num = get_shadow_ctxt(vmid, vcpuid, 17U); // a7
+	call_num  = get_shadow_ctxt(vmid, vcpuid, 10U); // a0
+	addr = get_shadow_ctxt(vmid, vcpuid, 11U); // a1
+	size = get_shadow_ctxt(vmid, vcpuid, 12U); // a2
 	ret = 1U;
 
 	if (HOSTVISOR < vmid && vmid < COREVISOR)
 	{
-		if (call_num == KVM_SET_DESC_PFN)
+		if (sbi_num != SBI_EXT_HYPSEC_HVC)
+		{
+			ret = 0U;
+		}
+		else if (call_num == KVM_SET_DESC_PFN)
 		{
 			grant_stage2_sg_gpa(vmid, addr, size);
 		}
@@ -46,7 +50,6 @@ u32 handle_pvops(u32 vmid, u32 vcpuid)
 
 	return check(ret);
 }
-#endif
 
 void handle_host_stage2_fault(struct s2_host_regs *host_regs)
 {

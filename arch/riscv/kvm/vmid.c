@@ -6,6 +6,7 @@
  *     Anup Patel <anup.patel@wdc.com>
  */
 
+#ifndef CONFIG_VERIFIED_KVM
 #include <linux/bitops.h>
 #include <linux/cpumask.h>
 #include <linux/errno.h>
@@ -118,3 +119,4 @@ void kvm_riscv_stage2_vmid_update(struct kvm_vcpu *vcpu)
 	kvm_for_each_vcpu(i, v, vcpu->kvm)
 		kvm_make_request(KVM_REQ_UPDATE_HGATP, v);
 }
+#endif

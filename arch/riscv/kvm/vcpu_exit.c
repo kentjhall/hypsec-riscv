@@ -167,9 +167,14 @@ static int virtual_inst_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	if (unlikely(INSN_IS_16BIT(insn))) {
 		if (insn == 0) {
 			ct = &vcpu->arch.guest_context;
+#ifndef CONFIG_VERIFIED_KVM
 			insn = kvm_riscv_vcpu_unpriv_read(vcpu, true,
 							  ct->sepc,
 							  &utrap);
+#else
+			insn = vcpu->arch.unpriv_read_val;
+			utrap = vcpu->arch.unpriv_read_trap;
+#endif
 			if (utrap.scause) {
 				utrap.sepc = ct->sepc;
 				kvm_riscv_vcpu_trap_redirect(vcpu, &utrap);
@@ -210,8 +215,13 @@ static int emulate_load(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		 * Bit[0] == 0 implies trapped instruction value is
 		 * zero or special value.
 		 */
+#ifndef CONFIG_VERIFIED_KVM
 		insn = kvm_riscv_vcpu_unpriv_read(vcpu, true, ct->sepc,
 						  &utrap);
+#else
+		insn = vcpu->arch.unpriv_read_val;
+		utrap = vcpu->arch.unpriv_read_trap;
+#endif
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
 			utrap.sepc = ct->sepc;
@@ -323,8 +333,13 @@ static int emulate_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 		 * Bit[0] == 0 implies trapped instruction value is
 		 * zero or special value.
 		 */
+#ifndef CONFIG_VERIFIED_KVM
 		insn = kvm_riscv_vcpu_unpriv_read(vcpu, true, ct->sepc,
 						  &utrap);
+#else
+		insn = vcpu->arch.unpriv_read_val;
+		utrap = vcpu->arch.unpriv_read_trap;
+#endif
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
 			utrap.sepc = ct->sepc;
@@ -453,6 +468,7 @@ static int stage2_page_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 	return 1;
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 /**
  * kvm_riscv_vcpu_unpriv_read -- Read machine word from Guest memory
  *
@@ -554,6 +570,7 @@ unsigned long kvm_riscv_vcpu_unpriv_read(struct kvm_vcpu *vcpu,
 
 	return val;
 }
+#endif
 
 /**
  * kvm_riscv_vcpu_trap_redirect -- Redirect trap to Guest

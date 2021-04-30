@@ -75,7 +75,11 @@ struct kvm_arch {
 	/* Guest Timer */
 	struct kvm_guest_timer timer;
 #ifdef CONFIG_VERIFIED_KVM
+
 	bool resume_inc_exe;
+
+	/* The last vcpu id that ran on each physical CPU */
+	int __percpu *last_vcpu_ran;
 #endif
 };
 
@@ -170,16 +174,12 @@ struct kvm_vcpu_csr {
 
 struct shadow_vcpu_context {
 	struct kvm_cpu_context ctxt;
-        u64 far_hs;
-        u64 hpfar;
-        u64 hcr_hs;
-        u64 ec;
+	struct kvm_cpu_trap trap;
+	int skip_len;
         u64 dirty;
         u64 flags;
 	struct kvm_vcpu_csr csr;
-        u32 esr;
         u32 vmid;
-	union __riscv_fp_state fp;
 };
 #endif
 
@@ -217,7 +217,10 @@ struct kvm_vcpu_arch {
 
 #ifdef CONFIG_VERIFIED_KVM
 	struct kvm_cpu_trap guest_trap;
+	unsigned long unpriv_read_val;
+	struct kvm_cpu_trap unpriv_read_trap;
 #endif
+	
 
 	/*
 	 * VCPU interrupts
@@ -329,7 +332,12 @@ int kvm_riscv_vcpu_mmio_return(struct kvm_vcpu *vcpu, struct kvm_run *run);
 int kvm_riscv_vcpu_exit(struct kvm_vcpu *vcpu, struct kvm_run *run,
 			struct kvm_cpu_trap *trap);
 
+#ifndef CONFIG_VERIFIED_KVM
 void __kvm_riscv_switch_to(struct kvm_vcpu_arch *vcpu_arch);
+#else
+struct hypsec_switch_context;
+void __kvm_riscv_switch_to(struct hypsec_switch_context *switch_ctxt);
+#endif
 void __kvm_riscv_fp_f_save(struct kvm_cpu_context *context);
 void __kvm_riscv_fp_f_restore(struct kvm_cpu_context *context);
 void __kvm_riscv_fp_d_save(struct kvm_cpu_context *context);

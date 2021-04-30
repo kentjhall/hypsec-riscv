@@ -6,11 +6,6 @@ void clear_phys_mem(u64 pfn) {
     hs_memset((void *)kern_hyp_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 }
 
-u64 get_exception_vector(u64 pstate) {
-    // TODO
-	return 0;
-}
-
 uint8_t* get_vm_public_key(u32 vmid) {
     struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
     return hs_data->vm_info[vmid].public_key;
@@ -32,14 +27,6 @@ void set_vm_load_signature(u32 vmid, u32 load_idx) {
     struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
     hs_hex2bin(hs_data->vm_info[vmid].load_info[load_idx].signature,
 		signature_hex, 64);
-}
-
-//make sure we only use get_int_ctxt to access general purposes regs
-void clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
-	struct hs_data *hs_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	hs_memset(&hs_data->shadow_vcpu_ctxt[offset].ctxt, 0, sizeof(struct kvm_cpu_context));
 }
 
 void int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
@@ -190,19 +177,6 @@ void iommu_pt_clear(u32 cbndx, u32 num) {
 	va = (u64)__hs_va(hs_data->iommu_cfg[index].hw_ttbr); 
 	hs_memset((void *)va, 0, PAGE_SIZE * 2);
 };
-
-void reset_fp_regs(u32 vmid, int vcpu_id)
-{
-	struct shadow_vcpu_context *shadow_ctxt = NULL;
-	struct kvm_vcpu *vcpu = vcpu;
-	struct kvm_cpu_context *kvm_cpu_context;
-
-	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
-	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-	kvm_cpu_context = &vcpu->arch.guest_context;
-	hs_memcpy(&shadow_ctxt->ctxt.fp, &kvm_cpu_context->fp,
-					sizeof(union __riscv_fp_state));
-}
 
 //Management
 

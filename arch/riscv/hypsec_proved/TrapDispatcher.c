@@ -77,6 +77,9 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 		case HVC_ENABLE_S2_TRANS:
 			hvc_enable_s2_trans();
 			break;
+		case HVC_VCPU_RUN:
+			__kvm_vcpu_run((u32)arg1, (int)arg2);
+			break;
 		case HVC_CLEAR_VM_S2_RANGE:
 			hs_clear_vm_stage2_range((u32)arg1, arg2, arg3);
 			break;
@@ -104,54 +107,6 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 			__hyp_panic();
 	}
 #if 0 // TEMPORARY
-	else if (callno == HVC_VCPU_RUN)
-	{
-		ret = (u64)__kvm_vcpu_run_nvhe((u32)arg1, (int)arg2);
-		set_host_regs(0, ret);
-	}
-	else if (callno == HVC_TIMER_SET_CNTVOFF)
-	{
-		__kvm_timer_set_cntvoff((u32)arg1, (u32)arg2);
-	}
-	else if (callno == HVC_CLEAR_VM_S2_RANGE)
-	{
-		hs_clear_vm_stage2_range((u32)arg1, arg2, arg3);
-	}
-	else if (callno == HVC_SET_BOOT_INFO)
-	{
-		ret = set_boot_info((u32)arg1, arg2, arg3);
-		set_host_regs(0, ret);
-	}
-	else if (callno == HVC_REMAP_VM_IMAGE)
-	{
-		remap_vm_image((u32)arg1, arg2, (u32)arg3);
-	}
-	else if (callno == HVC_VERIFY_VM_IMAGES)
-	{
-		verify_and_load_images((u32)arg1);
-		set_host_regs(0, 1);
-	}
-	else if (callno == HVC_IOMMU_FREE_PGD)
-	{
-		__hs_free_iommu_pgd((u32)arg1, (u32)arg2);
-	}
-	else if (callno == HVC_IOMMU_ALLOC_PGD)
-	{
-		__hs_alloc_iommu_pgd((u32)arg1, (u32)arg2, (u32)arg3);
-	}
-	else if (callno == HVC_IOMMU_LPAE_MAP)
-	{
-		__hs_riscv_lpae_map(arg1, arg2, arg3, (u32)arg4, (u32)arg5);
-	}
-	else if (callno == HVC_IOMMU_LPAE_IOVA_TO_PHYS)
-	{
-		ret64 = __hs_riscv_lpae_iova_to_phys(arg1, (u32)arg2, (u32)arg3);
-		set_host_regs(0, ret64);
-	}
-	else if (callno == HVC_IOMMU_CLEAR)
-	{
-		__hs_riscv_lpae_clear(arg1, (u32)arg2, (u32)arg3);
-	}
 	else if (callno == HVC_ENCRYPT_BUF)
 	{
 		__hs_encrypt_buf((u32)arg1, arg2, arg3);
@@ -168,20 +123,6 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 	else if (callno == HVC_LOAD_CRYPT_VCPU)
 	{
 		__load_encrypted_vcpu((u32)arg1, (u32)arg2);
-	}
-	else if (callno == HVC_REGISTER_KVM)
-	{
-		ret = register_kvm();
-		set_host_regs(0, ret);
-	}
-	else if (callno == HVC_REGISTER_VCPU)
-	{
-		register_vcpu((u32)arg1, (u32)arg2);
-		set_host_regs(0, ret);
-	}
-	else if (callno == HVC_PHYS_ADDR_IOREMAP)
-	{
-		hs_kvm_phys_addr_ioremap((u32)arg1, arg2, arg3, arg4);
 	}
 	else
 	{

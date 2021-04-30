@@ -172,7 +172,6 @@ int kvm_arch_init(void *opaque)
 		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(PAGE_SIZE * 2));
 		if (!stack_page)
 			return -ENOMEM;
-
 		
 		hs_data->thread_info[cpu].hs_sp = stack_page;
 		hs_data->thread_info[cpu].cpu = cpu;

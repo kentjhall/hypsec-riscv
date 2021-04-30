@@ -190,6 +190,12 @@ void asm_offsets(void)
 	OFFSET(KVM_ARCH_HOST_SCOUNTEREN, kvm_vcpu_arch, host_scounteren);
 
 #ifdef CONFIG_VERIFIED_KVM
+	OFFSET(HYPSEC_SWITCH_CONTEXT_ARCH, hypsec_switch_context, arch);
+	OFFSET(HYPSEC_SWITCH_CONTEXT_SHADOW_CTXT, hypsec_switch_context, shadow_ctxt);
+	OFFSET(HYPSEC_SWITCH_CONTEXT_SCRATCH, hypsec_switch_context, scratch);
+
+	OFFSET(SHADOW_VCPU_CONTEXT_SCOUNTEREN, shadow_vcpu_context, csr.scounteren);
+
 	OFFSET(KVM_CPU_CONTEXT_ZERO, kvm_cpu_context, zero);
 	OFFSET(KVM_CPU_CONTEXT_RA, kvm_cpu_context, ra);
 	OFFSET(KVM_CPU_CONTEXT_SP, kvm_cpu_context, sp);

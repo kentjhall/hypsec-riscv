@@ -22,6 +22,7 @@
 #ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_missing.h>
 #include <asm/hypsec_host.h>
+#include <asm/hypsec_virt.h>
 #endif
 
 struct kvm_stats_debugfs_item debugfs_entries[] = {
@@ -53,6 +54,7 @@ static void kvm_riscv_vcpu_fp_reset(struct kvm_vcpu *vcpu)
 		cntx->sstatus |= SR_FS_OFF;
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static void kvm_riscv_vcpu_fp_clean(struct kvm_cpu_context *cntx)
 {
 	cntx->sstatus &= ~SR_FS;
@@ -99,6 +101,7 @@ static void kvm_riscv_vcpu_host_fp_restore(struct kvm_cpu_context *cntx)
 	else if (riscv_isa_extension_available(NULL, f))
 		__kvm_riscv_fp_f_restore(cntx);
 }
+#endif
 #else
 static void kvm_riscv_vcpu_fp_reset(struct kvm_vcpu *vcpu)
 {
@@ -681,9 +684,13 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	struct kvm_vcpu_arch *v = &vcpu->arch;
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
+#ifndef CONFIG_VERIFIED_KVM
 	/* Read current HVIP and HIE CSRs */
 	hvip = csr_read(CSR_HVIP);
 	csr->hie = csr_read(CSR_HIE);
+#else
+	hvip = csr->hvip;;
+#endif
 
 	/* Sync-up HVIP.VSSIP bit changes does by Guest */
 	if ((csr->hvip ^ hvip) & (1UL << IRQ_VS_SOFT)) {
@@ -787,6 +794,7 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 
 void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	csr_write(CSR_VSSTATUS, csr->vsstatus);
@@ -806,16 +814,27 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	kvm_riscv_vcpu_host_fp_save(&vcpu->arch.host_context);
 	kvm_riscv_vcpu_guest_fp_restore(&vcpu->arch.guest_context,
 					vcpu->arch.isa);
+#else
+	int *last_ran = this_cpu_ptr(vcpu->kvm->arch.last_vcpu_ran);
+
+	if (*last_ran != vcpu->vcpu_id) {
+		vcpu->arch.was_preempted = true;
+		*last_ran = vcpu->vcpu_id;
+	}
+#endif
 
 	vcpu->cpu = cpu;
 }
 
 void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
+#endif
 
 	vcpu->cpu = -1;
 
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_riscv_vcpu_guest_fp_save(&vcpu->arch.guest_context,
 				     vcpu->arch.isa);
 	kvm_riscv_vcpu_host_fp_restore(&vcpu->arch.host_context);
@@ -831,6 +850,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 	csr->vstval = csr_read(CSR_VSTVAL);
 	csr->hvip = csr_read(CSR_HVIP);
 	csr->vsatp = csr_read(CSR_VSATP);
+#endif
 }
 
 static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
@@ -863,12 +883,14 @@ static void kvm_riscv_check_vcpu_requests(struct kvm_vcpu *vcpu)
 	}
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static void kvm_riscv_update_hvip(struct kvm_vcpu *vcpu)
 {
 	struct kvm_vcpu_csr *csr = &vcpu->arch.guest_csr;
 
 	csr_write(CSR_HVIP, csr->hvip);
 }
+#endif
 
 int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 {
@@ -916,7 +938,9 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		/* Check conditions before entering the guest */
 		cond_resched();
 
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_riscv_stage2_vmid_update(vcpu);
+#endif
 
 		kvm_riscv_check_vcpu_requests(vcpu);
 
@@ -950,11 +974,15 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 */
 		kvm_riscv_vcpu_flush_interrupts(vcpu);
 
+#ifndef CONFIG_VERIFIED_KVM
 		/* Update HVIP CSR for current CPU */
 		kvm_riscv_update_hvip(vcpu);
+#endif
 
 		if (ret <= 0 ||
+#ifndef CONFIG_VERIFIED_KVM
 		    kvm_riscv_stage2_vmid_ver_changed(&vcpu->kvm->arch.vmid) ||
+#endif
 		    kvm_request_pending(vcpu)) {
 			vcpu->mode = OUTSIDE_GUEST_MODE;
 			local_irq_enable();
@@ -965,28 +993,26 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 
 		guest_enter_irqoff();
 
+#ifndef CONFIG_VERIFIED_KVM
 		__kvm_riscv_switch_to(&vcpu->arch);
+#else
+		kvm_call_core(HVC_VCPU_RUN, vcpu->kvm->arch.vmid.vmid, vcpu->vcpu_id);
+#endif
 
 		vcpu->mode = OUTSIDE_GUEST_MODE;
 		vcpu->stat.exits++;
 
+#ifndef CONFIG_VERIFIED_KVM
 		/*
 		 * Save SCAUSE, STVAL, HTVAL, and HTINST because we might
 		 * get an interrupt between __kvm_riscv_switch_to() and
 		 * local_irq_enable() which can potentially change CSRs.
 		 */
-#ifndef CONFIG_VERIFIED_KVM
 		trap.sepc = vcpu->arch.guest_context.sepc;
 		trap.scause = csr_read(CSR_SCAUSE);
 		trap.stval = csr_read(CSR_STVAL);
 		trap.htval = csr_read(CSR_HTVAL);
 		trap.htinst = csr_read(CSR_HTINST);
-#else
-		vcpu->arch.guest_trap.sepc = vcpu->arch.guest_context.sepc;
-		vcpu->arch.guest_trap.scause = csr_read(CSR_SCAUSE);
-		vcpu->arch.guest_trap.stval = csr_read(CSR_STVAL);
-		vcpu->arch.guest_trap.htval = csr_read(CSR_HTVAL);
-		vcpu->arch.guest_trap.htinst = csr_read(CSR_HTINST);
 #endif
 
 		/* Syncup interrupts state with HW */

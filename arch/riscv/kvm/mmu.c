@@ -345,6 +345,14 @@ next:
 		if (may_block && addr < end)
 			cond_resched_lock(&kvm->mmu_lock);
 	}
+
+#ifdef CONFIG_VERIFIED_KVM
+	if (size == stage2_gpa_size) {
+                size = mach_phys_mem_size;
+                start = mach_phys_mem_start;
+                clear_vm_stage2_range(kvm->arch.vmid.vmid, start, size);
+        }
+#endif
 }
 
 static void stage2_wp_range(struct kvm *kvm, gpa_t start, gpa_t end)
@@ -807,6 +815,7 @@ void kvm_riscv_stage2_flush_cache(struct kvm_vcpu *vcpu)
 	stage2_cache_flush(&vcpu->arch.mmu_page_cache);
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 int kvm_riscv_stage2_alloc_pgd(struct kvm *kvm)
 {
 	struct page *pgd_page;
@@ -825,9 +834,11 @@ int kvm_riscv_stage2_alloc_pgd(struct kvm *kvm)
 
 	return 0;
 }
+#endif
 
 void kvm_riscv_stage2_free_pgd(struct kvm *kvm)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	void *pgd = NULL;
 
 	spin_lock(&kvm->mmu_lock);
@@ -841,10 +852,16 @@ void kvm_riscv_stage2_free_pgd(struct kvm *kvm)
 
 	if (pgd)
 		free_pages((unsigned long)pgd, get_order(stage2_pgd_size));
+#else
+	spin_lock(&kvm->mmu_lock);
+	clear_vm_stage2_range(kvm->arch.vmid.vmid, mach_phys_mem_start, mach_phys_mem_size);
+	spin_unlock(&kvm->mmu_lock);
+#endif
 }
 
 void kvm_riscv_stage2_update_hgatp(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	unsigned long hgatp = stage2_mode;
 	struct kvm_arch *k = &vcpu->kvm->arch;
 
@@ -856,6 +873,7 @@ void kvm_riscv_stage2_update_hgatp(struct kvm_vcpu *vcpu)
 
 	if (!kvm_riscv_stage2_vmid_bits())
 		__kvm_riscv_hfence_gvma_all();
+#endif
 }
 
 void kvm_riscv_stage2_mode_detect(void)

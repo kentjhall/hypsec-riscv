@@ -4,9 +4,6 @@
  * BootOps
  */
 
-#if 0
-
-//TODO: change function name to search_load_info
 u64 search_load_info(u32 vmid, u64 addr)
 {
 	u32 num, load_idx;
@@ -31,6 +28,7 @@ u64 search_load_info(u32 vmid, u64 addr)
 	return ret;
 } 
 
+#if 0
 void set_vcpu_active(u32 vmid, u32 vcpuid)
 {
 	u32 vm_state, vcpu_state;
@@ -309,7 +307,6 @@ void map_io(u32 vmid, u64 gpa, u64 pa)
 	release_lock_vm(vmid);
 }
 
-#if 0
  u32 vm_is_inc_exe(u32 vmid)
 {
 	u32 inc_exe;
@@ -319,6 +316,7 @@ void map_io(u32 vmid, u64 gpa, u64 pa)
 	return check(inc_exe);
 }
 
+#if 0
 void __save_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 {
 	encrypt_gp_regs(vmid, vcpu_id);

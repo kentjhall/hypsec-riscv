@@ -25,7 +25,7 @@ void __handle_plic_read(u64 fault_ipa, u32 len, unsigned long insn)
 	u64 data;
 	int shift;
 
-	rt = host_dabt_get_rd(insn);
+	rt = insn_decode_rd(insn, false);
 	shift = host_dabt_get_shift(insn, len);
 	if (len == 4)
 	{

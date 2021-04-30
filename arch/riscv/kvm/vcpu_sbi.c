@@ -108,9 +108,16 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		kvm_riscv_vcpu_unset_interrupt(vcpu, IRQ_VS_SOFT);
 		break;
 	case SBI_EXT_0_1_SEND_IPI:
+#ifndef CONFIG_VERIFIED_KVM
 		if (cp->a0)
 			hmask = kvm_riscv_vcpu_unpriv_read(vcpu, false, cp->a0,
 							   &utrap);
+#else
+		if (cp->a0) {
+			hmask = vcpu->arch.unpriv_read_val;
+			utrap = vcpu->arch.unpriv_read_trap;
+		}
+#endif
 		else
 			hmask = (1UL << atomic_read(&kvm->online_vcpus)) - 1;
 		if (utrap.scause) {
@@ -132,9 +139,16 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	case SBI_EXT_0_1_REMOTE_FENCE_I:
 	case SBI_EXT_0_1_REMOTE_SFENCE_VMA:
 	case SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID:
+#ifndef CONFIG_VERIFIED_KVM
 		if (cp->a0)
 			hmask = kvm_riscv_vcpu_unpriv_read(vcpu, false, cp->a0,
 							   &utrap);
+#else
+		if (cp->a0) {
+			hmask = vcpu->arch.unpriv_read_val;
+			utrap = vcpu->arch.unpriv_read_trap;
+		}
+#endif
 		else
 			hmask = (1UL << atomic_read(&kvm->online_vcpus)) - 1;
 		if (utrap.scause) {

@@ -12,6 +12,9 @@
 #define kvm_ksym_ref(sym) ((void *)&(sym))
 #define kern_hyp_va(ptr) (ptr)
 
+#define current_hs_thread_info() \
+	((struct hs_thread_info *)riscv_current_is_tp)
+
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(sizeof(struct kvm_vcpu_csr)/sizeof(unsigned long))
 #define SHADOW_32BIT_REGS_SIZE		0
@@ -20,6 +23,12 @@
 
 #define VCPU_IDX(vmid, vcpu_id) \
 	(vmid * HYPSEC_MAX_VCPUS) + vcpu_id
+
+struct hypsec_switch_context {
+	struct kvm_vcpu_arch *arch;
+	struct shadow_vcpu_context *shadow_ctxt;
+	unsigned long scratch;
+};
 
 struct shared_data {
 	struct kvm kvm_pool[HS_MAX_VMID];
@@ -251,7 +260,7 @@ extern struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id);
 static void inline set_per_cpu(int vmid, int vcpu_id)
 {
 	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	hs_data->per_cpu_data[pcpuid].vmid = vmid;
 	hs_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
 };
@@ -261,14 +270,14 @@ static void inline set_per_cpu(int vmid, int vcpu_id)
 static int inline get_cur_vmid(void)
 {
         struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	return hs_data->per_cpu_data[pcpuid].vmid;
 };
 
 static int inline get_cur_vcpu_id(void)
 {
         struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
-	int pcpuid = smp_processor_id();
+	int pcpuid = current_hs_thread_info()->cpu;
 	return hs_data->per_cpu_data[pcpuid].vcpu_id;
 };
 
@@ -278,22 +287,28 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
         struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
-	if (index < 35)
+	if (index <= GP_REG_END)
 		val = ((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].ctxt)[index];
-	else if (index == V_FAR_HS)
-		val = hs_data->shadow_vcpu_ctxt[offset].far_hs;
-	else if (index == V_HPFAR_HS)
-		val = hs_data->shadow_vcpu_ctxt[offset].hpfar;
-	else if (index == V_HCR_HS)
-		val = hs_data->shadow_vcpu_ctxt[offset].hcr_hs;
+	else if (index == V_PC)
+		val = hs_data->shadow_vcpu_ctxt[offset].ctxt.sepc;
+	else if (index == V_SSTATUS)
+		val = hs_data->shadow_vcpu_ctxt[offset].ctxt.sstatus;
+	else if (index == V_HSTATUS)
+		val = hs_data->shadow_vcpu_ctxt[offset].ctxt.hstatus;
+	else if (index == V_STVAL)
+		val = hs_data->shadow_vcpu_ctxt[offset].trap.stval;
+	else if (index == V_HTVAL)
+		val = hs_data->shadow_vcpu_ctxt[offset].trap.htval;
+	else if (index == V_HTINST)
+		val = hs_data->shadow_vcpu_ctxt[offset].trap.htinst;
 	else if (index == V_EC)
-		val = hs_data->shadow_vcpu_ctxt[offset].ec;
+		val = hs_data->shadow_vcpu_ctxt[offset].trap.scause;
 	else if (index == V_DIRTY)
 		val = hs_data->shadow_vcpu_ctxt[offset].dirty;
 	else if (index == V_FLAGS)
 		val = hs_data->shadow_vcpu_ctxt[offset].flags;
-	else if (index >= SYSREGS_START) {
-		index -= SYSREGS_START;
+	else if (index >= CSRS_START) {
+		index -= CSRS_START;
 		val = ((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].csr)[index];
 	} else {
 		print_string("\rinvalid get shadow ctxt\n");
@@ -308,22 +323,28 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//hs_data->shadow_vcpu_ctxt[offset].regs[index] = value;
-	if (index < 35)
+	if (index <= GP_REG_END)
 		((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].ctxt)[index] = value;
-	else if (index == V_FAR_HS)
-		hs_data->shadow_vcpu_ctxt[offset].far_hs = value;
-	else if (index == V_HPFAR_HS)
-		hs_data->shadow_vcpu_ctxt[offset].hpfar = value;
-	else if (index == V_HCR_HS)
-		hs_data->shadow_vcpu_ctxt[offset].hcr_hs = value;
+	else if (index == V_PC)
+		hs_data->shadow_vcpu_ctxt[offset].ctxt.sepc = value;
+	else if (index == V_SSTATUS)
+		hs_data->shadow_vcpu_ctxt[offset].ctxt.sstatus = value;
+	else if (index == V_HSTATUS)
+		hs_data->shadow_vcpu_ctxt[offset].ctxt.hstatus = value;
+	else if (index == V_STVAL)
+		hs_data->shadow_vcpu_ctxt[offset].trap.stval = value;
+	else if (index == V_HTVAL)
+		hs_data->shadow_vcpu_ctxt[offset].trap.htval = value;
+	else if (index == V_HTINST)
+		hs_data->shadow_vcpu_ctxt[offset].trap.htinst = value;
 	else if (index == V_EC)
-		hs_data->shadow_vcpu_ctxt[offset].ec = value;
+		hs_data->shadow_vcpu_ctxt[offset].trap.scause = value;
 	else if (index == V_DIRTY)
 		hs_data->shadow_vcpu_ctxt[offset].dirty = value;
 	else if (index == V_FLAGS)
 		hs_data->shadow_vcpu_ctxt[offset].flags = value;
-	else if (index >= SYSREGS_START) {
-		index -= SYSREGS_START;
+	else if (index >= CSRS_START) {
+		index -= CSRS_START;
 		((unsigned long *)&hs_data->shadow_vcpu_ctxt[offset].csr)[index] = value;
 	} else
 		print_string("\rinvalid set shadow ctxt\n");
@@ -332,11 +353,10 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 
-void __vm_sysreg_restore_state_nvhe(u32 vmid, u32 vcpuid);
-void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
-
-void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
-void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
+void __csr_restore_state(struct kvm_vcpu_csr *csr);
+void __csr_save_state(struct kvm_vcpu_csr *csr);
+void __vm_csr_restore_state_opt(struct shadow_vcpu_context *ctxt);
+void __vm_csr_save_state_opt(struct shadow_vcpu_context *ctxt);
 
 void init_hacl_hash(struct hs_data *hs_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
@@ -360,4 +380,5 @@ static void inline set_pt_hgatp(u32 vmid, u64 hgatp) {
 void handle_host_stage2_fault(struct s2_host_regs *host_regs);
 
 void __kvm_riscv_host_switch(void);
+void __kvm_vcpu_run(u32 vmid, int vcpu_id);
 #endif /* __RISCV_STAGE2_H__ */

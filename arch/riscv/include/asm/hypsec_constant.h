@@ -38,7 +38,7 @@
 #define S2_PGD_PAGES_NUM 1UL
 #define MEMBLOCK_NOMAP 1UL
 */
-#define MAX_MMIO_ADDR 0x40000000
+#define MAX_MMIO_ADDR 0x80000000
 #define S2_RDWR PTE_S2_RDWR 
 #define PMD_PAGE_MASK PMD_MASK 
 
@@ -59,23 +59,27 @@
 #define VCPU_PER_VM	8
 
 //#define SHADOW_SYS_REGS_SIZE 1
-#define V_SP		31
+#define GP_REG_END	31
 #define V_PC		32
-#define V_PSTATE 	33
-#define	V_SP_EL1	34
-#define V_ELR_EL1	35
-#define V_SPSR_EL1	36
-#define V_SPSR_ABT	37
-#define V_SPSR_UND	38
-#define V_SPSR_IRQ	39
-#define V_SPSR_FIQ	40
-#define V_FAR_HS	41
-#define V_HPFAR_HS	42
-#define V_HCR_HS	43
-#define V_EC		44
-#define V_DIRTY		45
-#define V_FLAGS		46
-#define SYSREGS_START	47
+#define V_SSTATUS 	33
+#define	V_HSTATUS	34
+#define V_STVAL		35
+#define V_HTVAL		36
+#define V_HTINST	37
+#define V_EC		38
+#define V_DIRTY		39
+#define V_FLAGS		40
+#define CSRS_START	V_VSSTATUS
+#define V_VSSTATUS	41
+#define V_HIE		42
+#define V_VSTVEC	43
+#define V_VSSCRATCH	44
+#define V_VSEPC		45
+#define V_VSCAUSE	46
+#define V_VSTVAL	47
+#define V_HVIP		48
+#define V_VSATP		49
+#define V_SCOUNTEREN	50
 
 // Do we need the 32 bit registers?
 #define V_ESR_EL1	41 + ESR_EL1

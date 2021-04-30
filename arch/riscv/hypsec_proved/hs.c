@@ -1,18 +1,12 @@
 #include <linux/types.h>
-#include <asm/kvm_asm.h>
-#include <asm/kvm_hyp.h>
 #include <linux/mman.h>
 #include <linux/kvm_host.h>
 #include <linux/io.h>
 #include <trace/events/kvm.h>
 #include <asm/pgalloc.h>
 #include <asm/cacheflush.h>
-#include <asm/kvm_arm.h>
-#include <asm/kvm_mmu.h>
-#include <asm/kvm_mmio.h>
-#include <asm/kvm_emulate.h>
-#include <asm/virt.h>
-#include <asm/kernel-pgtable.h>
+#include <asm/hypsec_virt.h>
+#include <asm/hypsec_pgtable.h>
 #include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
@@ -120,77 +114,42 @@ struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt(
 		return shadow_ctxt;
 }
 
-#define CURRENT_EL_SP_EL0_VECTOR	0x0
-#define CURRENT_EL_SP_ELx_VECTOR	0x200
-#define LOWER_EL_AArch64_VECTOR		0x400
-#define LOWER_EL_AArch32_VECTOR		0x600
-
-enum exception_type {
-	except_type_sync	= 0,
-	except_type_irq		= 0x80,
-	except_type_fiq		= 0x100,
-	except_type_serror	= 0x180,
-};
-
-static u64 stage2_get_exception_vector(u64 pstate)
+static u64 stage2_get_exception_vector(void)
 {
-	u64 exc_offset;
-
-	switch (pstate & (PSR_MODE_MASK | PSR_MODE32_BIT)) {
-	case PSR_MODE_EL1t:
-		exc_offset = CURRENT_EL_SP_EL0_VECTOR;
-		break;
-	case PSR_MODE_EL1h:
-		exc_offset = CURRENT_EL_SP_ELx_VECTOR;
-		break;
-	case PSR_MODE_EL0t:
-		exc_offset = LOWER_EL_AArch64_VECTOR;
-		break;
-	default:
-		exc_offset = LOWER_EL_AArch32_VECTOR;
-	}
-
-	return read_sysreg(vbar_el1) + exc_offset;
+	return csr_read(CSR_VSTVEC);
 }
 
 /* Currently, we do not handle lower level fault from 32bit host */
 void stage2_inject_el1_fault(unsigned long addr)
 {
-	u64 pstate = read_sysreg(spsr_hs);
-	u32 esr = 0, esr_hs;
-	bool is_iabt = false;
+	unsigned long vsstatus = csr_read(CSR_VSSTATUS);
 
-	write_sysreg(read_sysreg(elr_hs), elr_el1);
-	write_sysreg(stage2_get_exception_vector(pstate), elr_hs);
+	csr_write(CSR_VSEPC, csr_read(CSR_SEPC));
+	csr_write(CSR_SEPC, stage2_get_exception_vector());
 
-	write_sysreg(addr, far_el1);
-	write_sysreg(PSTATE_FAULT_BITS_64, spsr_hs);
-	write_sysreg(pstate, spsr_el1);
+	/* Change Guest SSTATUS.SPP bit */
+	vsstatus &= ~SR_SPP;
+	if (csr_read(CSR_SSTATUS) & SR_SPP)
+		vsstatus |= SR_SPP;
 
-	esr_hs = read_sysreg(esr_hs);
-	if ((esr_hs << ESR_ELx_EC_SHIFT) == ESR_ELx_EC_IABT_LOW)
-		is_iabt = true;
+	/* Change Guest SSTATUS.SPIE bit */
+	vsstatus &= ~SR_SPIE;
+	if (vsstatus & SR_SIE)
+		vsstatus |= SR_SPIE;
 
-	/* To get fancier debug info that includes LR from the guest Linux,
-	 * we can intentionally comment out the EC_LOW_ABT case and always
-	 * inject the CUR mode exception.
-	 */
-	if ((pstate & PSR_MODE_MASK) == PSR_MODE_EL0t)
-		esr |= (ESR_ELx_EC_IABT_LOW << ESR_ELx_EC_SHIFT);
-	else
-		esr |= (ESR_ELx_EC_IABT_CUR << ESR_ELx_EC_SHIFT);
+	/* Clear Guest SSTATUS.SIE bit */
+	vsstatus &= ~SR_SIE;
 
-	if (!is_iabt)
-		esr |= ESR_ELx_EC_DABT_LOW << ESR_ELx_EC_SHIFT;
+	csr_write(CSR_VSTVAL, addr);
+	csr_write(CSR_VSSTATUS, vsstatus);
 
-	esr |= ESR_ELx_FSC_EXTABT;
-	write_sysreg(esr, esr_el1);
+	csr_write(CSR_VSCAUSE, csr_read(CSR_SCAUSE));
 }
 
 void reject_invalid_mem_access(phys_addr_t addr)
 {
 	printk("invalid access of guest memory\n\r");
 	printk("pc: %lx\n", csr_read(CSR_SEPC));
-	printk("pa: %lx\n", addr);
+	printk("pa: %llx\n", addr);
 	stage2_inject_el1_fault(addr);
 }

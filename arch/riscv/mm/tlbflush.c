@@ -54,3 +54,10 @@ void flush_tlb_range(struct vm_area_struct *vma, unsigned long start,
 {
 	__sbi_tlb_flush_range(mm_cpumask(vma->vm_mm), start, end - start);
 }
+
+#ifdef CONFIG_VERIFIED_KVM
+void hypsec_tlb_flush_local_vmid(void)
+{
+	sbi_remote_hfence_vvma(NULL, 0, -1);
+}
+#endif

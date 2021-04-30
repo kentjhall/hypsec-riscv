@@ -2,6 +2,7 @@
 #define __RISCV_STAGE2_MMU__
 
 #include <linux/memblock.h>
+#include <asm/hypsec_constant.h>
 
 /* S2 Pages can map up to 16GB of RAM */
 #define S2_PFN_SIZE	4096 * 4096
@@ -107,14 +108,9 @@ unsigned long get_hs_image_va(u32 vmid, unsigned long addr);
 extern struct s2_trans handle_from_vm_info(struct hs_data *hs_data,
 					   unsigned long hs_va, unsigned long addr);
 
-static inline bool is_gic_cpu(u64 addr)
-{
-	return (addr >= 0x08010000 && addr < 0x08020000) ? true : false;
-}
-
 static inline bool is_mmio_gpa(u64 addr)
 {
-	return (addr < 0x40000000 && !is_gic_cpu(addr)) ? true : false;
+	return addr < MAX_MMIO_ADDR;
 }
 
 pmd_t *pmd_offset_hs(pud_t *pud, u64 addr);

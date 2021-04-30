@@ -112,48 +112,154 @@
 				 (s32)(((insn) >> 7) & 0x1f))
 #define MASK_FUNCT3		0x7000
 
-static inline unsigned long host_read_insn(void)
+static inline unsigned long unpriv_read(bool read_insn, unsigned long vaddr,
+					struct kvm_cpu_trap *trap)
 {
-	struct kvm_cpu_trap dummy = { 0 };
-	register unsigned long taddr asm("a0") = (unsigned long)&dummy;
+	register unsigned long taddr asm("a0") = (unsigned long)trap;
 	register unsigned long ttmp asm("a1");
 	register unsigned long val asm("t0");
 	register unsigned long tmp asm("t1");
-	register unsigned long addr asm("t2") = csr_read(CSR_SEPC);
+	register unsigned long addr asm("t2") = vaddr;
 
-	/*
-	 * HLVX.HU instruction
-	 * 0110010 00011 rs1 100 rd 1110011
-	 */
-	asm volatile ("\n"
-		".option push\n"
-		".option norvc\n"
-		"add %[ttmp], %[taddr], 0\n"
+	if (read_insn) {
 		/*
-		 * HLVX.HU %[val], (%[addr])
-		 * HLVX.HU t0, (t2)
-		 * 0110010 00011 00111 100 00101 1110011
+		 * HLVX.HU instruction
+		 * 0110010 00011 rs1 100 rd 1110011
 		 */
-		".word 0x6433c2f3\n"
-		"andi %[tmp], %[val], 3\n"
-		"addi %[tmp], %[tmp], -3\n"
-		"bne %[tmp], zero, 2f\n"
-		"addi %[addr], %[addr], 2\n"
+		asm volatile ("\n"
+			".option push\n"
+			".option norvc\n"
+			"add %[ttmp], %[taddr], 0\n"
+			/*
+			 * HLVX.HU %[val], (%[addr])
+			 * HLVX.HU t0, (t2)
+			 * 0110010 00011 00111 100 00101 1110011
+			 */
+			".word 0x6433c2f3\n"
+			"andi %[tmp], %[val], 3\n"
+			"addi %[tmp], %[tmp], -3\n"
+			"bne %[tmp], zero, 2f\n"
+			"addi %[addr], %[addr], 2\n"
+			/*
+			 * HLVX.HU %[tmp], (%[addr])
+			 * HLVX.HU t1, (t2)
+			 * 0110010 00011 00111 100 00110 1110011
+			 */
+			".word 0x6433c373\n"
+			"sll %[tmp], %[tmp], 16\n"
+			"add %[val], %[val], %[tmp]\n"
+			"2:\n"
+			".option pop"
+		: [val] "=&r" (val), [tmp] "=&r" (tmp),
+		  [taddr] "+&r" (taddr), [ttmp] "+&r" (ttmp),
+		  [addr] "+&r" (addr) : : "memory");
+
+		if (trap->scause == EXC_LOAD_PAGE_FAULT)
+			trap->scause = EXC_INST_PAGE_FAULT;
+	} else {
 		/*
-		 * HLVX.HU %[tmp], (%[addr])
-		 * HLVX.HU t1, (t2)
-		 * 0110010 00011 00111 100 00110 1110011
+		 * HLV.D instruction
+		 * 0110110 00000 rs1 100 rd 1110011
+		 *
+		 * HLV.W instruction
+		 * 0110100 00000 rs1 100 rd 1110011
 		 */
-		".word 0x6433c373\n"
-		"sll %[tmp], %[tmp], 16\n"
-		"add %[val], %[val], %[tmp]\n"
-		"2:\n"
-		".option pop"
-	: [val] "=&r" (val), [tmp] "=&r" (tmp),
-	  [taddr] "+&r" (taddr), [ttmp] "+&r" (ttmp),
-	  [addr] "+&r" (addr) : : "memory");
+		asm volatile ("\n"
+			".option push\n"
+			".option norvc\n"
+			"add %[ttmp], %[taddr], 0\n"
+#ifdef CONFIG_64BIT
+			/*
+			 * HLV.D %[val], (%[addr])
+			 * HLV.D t0, (t2)
+			 * 0110110 00000 00111 100 00101 1110011
+			 */
+			".word 0x6c03c2f3\n"
+#else
+			/*
+			 * HLV.W %[val], (%[addr])
+			 * HLV.W t0, (t2)
+			 * 0110100 00000 00111 100 00101 1110011
+			 */
+			".word 0x6803c2f3\n"
+#endif
+			".option pop"
+		: [val] "=&r" (val),
+		  [taddr] "+&r" (taddr), [ttmp] "+&r" (ttmp)
+		: [addr] "r" (addr) : "memory");
+	}
 
 	return val;
+}
+
+static inline unsigned long vm_read(u32 vmid, u32 vcpuid,
+                                    bool read_insn, unsigned long vaddr)
+{
+	unsigned long val;
+	unsigned long old_stvec, old_hstatus;
+	struct kvm_vcpu *vcpu;
+
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpuid);
+	old_hstatus = csr_swap(CSR_HSTATUS, get_int_hstatus(vmid, vcpuid));
+	old_stvec = csr_swap(CSR_STVEC, (ulong)&__kvm_riscv_unpriv_trap);
+
+	val = unpriv_read(read_insn, vaddr, &vcpu->arch.unpriv_read_trap);
+
+	csr_write(CSR_STVEC, old_stvec);
+	csr_write(CSR_HSTATUS, old_hstatus);
+
+	set_int_unpriv_read_val(vmid, vcpuid, val);
+
+	if (vcpu->arch.unpriv_read_trap.scause)
+		return -1;
+	return val;
+}
+
+#define vm_read_insn(vmid, vcpuid) \
+	vm_read(vmid, vcpuid, true, csr_read(CSR_SEPC))
+
+static inline int insn_decode_rd(unsigned long insn, bool is_write)
+{
+	int rd = REG_OFFSET(insn, SH_RS2);
+
+	if (is_write) {
+		if ((insn & INSN_MASK_SW) == INSN_MATCH_SW) {
+			;
+		} else if ((insn & INSN_MASK_SB) == INSN_MATCH_SB) {
+			;
+#ifdef CONFIG_64BIT
+		} else if ((insn & INSN_MASK_SD) == INSN_MATCH_SD) {
+			;
+#endif
+		} else if ((insn & INSN_MASK_SH) == INSN_MATCH_SH) {
+			;
+#ifdef CONFIG_64BIT
+		} else if ((insn & INSN_MASK_C_SD) == INSN_MATCH_C_SD) {
+			rd = REG_OFFSET(RVC_RS2S(insn), 0);
+		} else if ((insn & INSN_MASK_C_SDSP) == INSN_MATCH_C_SDSP &&
+			   ((insn >> SH_RD) & 0x1f)) {
+			rd = REG_OFFSET(insn, SH_RS2C);
+#endif
+		} else if ((insn & INSN_MASK_C_SW) == INSN_MATCH_C_SW) {
+			rd = REG_OFFSET(RVC_RS2S(insn), 0);
+		} else if ((insn & INSN_MASK_C_SWSP) == INSN_MATCH_C_SWSP &&
+			   ((insn >> SH_RD) & 0x1f)) {
+			rd = REG_OFFSET(insn, SH_RS2C);
+		} else {
+			// Can't decode
+			hyp_panic();
+		}
+	} else
+		rd = REG_OFFSET(insn, SH_RD);
+
+	return rd / sizeof(unsigned long);
+}
+
+static inline unsigned long host_read_insn(void)
+{
+	struct kvm_cpu_trap dummy;
+	return unpriv_read(true, csr_read(CSR_SEPC), &dummy);
+
 }
 
 static inline u32 host_dabt_get_as(unsigned long insn)
@@ -262,43 +368,6 @@ static inline bool host_dabt_is_write(void)
 static inline u64 host_get_fault_ipa(void)
 {
 	return ((csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3));
-}
-
-static inline int host_dabt_get_rd(unsigned long insn)
-{
-	int rd = REG_OFFSET(insn, SH_RS2);
-
-	if (host_dabt_is_write()) {
-		if ((insn & INSN_MASK_SW) == INSN_MATCH_SW) {
-			;
-		} else if ((insn & INSN_MASK_SB) == INSN_MATCH_SB) {
-			;
-#ifdef CONFIG_64BIT
-		} else if ((insn & INSN_MASK_SD) == INSN_MATCH_SD) {
-			;
-#endif
-		} else if ((insn & INSN_MASK_SH) == INSN_MATCH_SH) {
-			;
-#ifdef CONFIG_64BIT
-		} else if ((insn & INSN_MASK_C_SD) == INSN_MATCH_C_SD) {
-			rd = REG_OFFSET(RVC_RS2S(insn), 0);
-		} else if ((insn & INSN_MASK_C_SDSP) == INSN_MATCH_C_SDSP &&
-			   ((insn >> SH_RD) & 0x1f)) {
-			rd = REG_OFFSET(insn, SH_RS2C);
-#endif
-		} else if ((insn & INSN_MASK_C_SW) == INSN_MATCH_C_SW) {
-			rd = REG_OFFSET(RVC_RS2S(insn), 0);
-		} else if ((insn & INSN_MASK_C_SWSP) == INSN_MATCH_C_SWSP &&
-			   ((insn >> SH_RD) & 0x1f)) {
-			rd = REG_OFFSET(insn, SH_RS2C);
-		} else {
-			// Can't decode
-			hyp_panic();
-		}
-	} else
-		rd = REG_OFFSET(insn, SH_RD);
-
-	return rd / sizeof(unsigned long);
 }
 
 static inline void host_skip_instr(unsigned long insn)

@@ -6,46 +6,32 @@
 
 void save_shadow_kvm_regs()
 {
-	u64 ec, hsr, hsr_ec;
+	u64 scause;
 	u32 vmid, vcpuid;
 
 	vmid = get_cur_vmid();
 	vcpuid = get_cur_vcpu_id();
-	ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
+	scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
 
-	if (ec == ARM_EXCEPTION_TRAP)
+	if (!(scause & CAUSE_IRQ_FLAG))
 	{
-		hsr = get_shadow_esr(vmid, vcpuid);
-		hsr_ec = ESR_ELx_EC(hsr);
-
-		if (hsr_ec == ESR_ELx_EC_WFx)
+		if (scause == EXC_VIRTUAL_INST_FAULT)
 		{
 			prep_wfx(vmid, vcpuid);
 		}
-		else if (hsr_ec == ESR_ELx_EC_HVC32)
+		else if (scause == EXC_SUPERVISOR_SYSCALL)
 		{
 			prep_hvc(vmid, vcpuid);
 		}
-		else if (hsr_ec == ESR_ELx_EC_HVC64)
-		{
-			prep_hvc(vmid, vcpuid);
-		}
-		else if (hsr_ec == ESR_ELx_EC_IABT_LOW)
+		else if (scause == EXC_INST_GUEST_PAGE_FAULT ||
+		         scause == EXC_LOAD_GUEST_PAGE_FAULT ||
+		         scause == EXC_STORE_GUEST_PAGE_FAULT)
 		{
 			prep_abort(vmid, vcpuid);
-		}
-		else if (hsr_ec == ESR_ELx_EC_DABT_LOW)
-		{
-			prep_abort(vmid, vcpuid);
-		}
-		else if (hsr_ec == ESR_ELx_EC_BRK64)
-		{
-			//TODO: why we do not have this in the verified code?
-			prep_wfx(vmid, vcpuid);
 		}
 		else
 		{
-			print_string("\runknown exception\n");
+			print_string("unknown exception\n");
 			v_panic();
 		}
 	}
@@ -54,7 +40,7 @@ void save_shadow_kvm_regs()
 //TODO: Xupeng, please sync
 void restore_shadow_kvm_regs()
 {
-	u64 dirty, ec, pc, addr;
+	u64 dirty, scause, pc, addr;
 	u32 vmid, vcpuid;
 
 	vmid = get_cur_vmid();
@@ -74,8 +60,8 @@ void restore_shadow_kvm_regs()
     	}
 	else
 	{
-	        ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
-		if (ec == ARM_EXCEPTION_TRAP && dirty)
+	        scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
+		if (!(scause & CAUSE_IRQ_FLAG) && dirty)
 		{
 			sync_dirty_to_shadow(vmid, vcpuid);
 		}
@@ -89,11 +75,11 @@ void restore_shadow_kvm_regs()
 		if (dirty & DIRTY_PC_FLAG)
 		{
 			pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
-			set_shadow_ctxt(vmid, vcpuid, V_PC, pc + 4UL);
+			set_shadow_ctxt(vmid, vcpuid, V_PC, pc + get_shadow_skip_len(vmid, vcpuid));
 		}
 
 		set_shadow_dirty_bit(vmid, vcpuid, 0UL);
-		set_shadow_ctxt(vmid, vcpuid, V_FAR_HS, 0UL);
+		set_shadow_skip_len(vmid, vcpuid, 0UL);
 		addr = get_vm_fault_addr(vmid, vcpuid);
 
 		//TODO: Xupeng did not do exactly the same here...

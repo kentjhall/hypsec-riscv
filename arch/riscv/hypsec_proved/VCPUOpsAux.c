@@ -1,5 +1,6 @@
 #include "hypsec.h"
-#include <uapi/linux/psci.h>
+#include "MmioOps.h"
+#include <asm/sbi.h>
 
 /*
  * VCPUOpsAux
@@ -7,7 +8,7 @@
 
 void reset_gp_regs(u32 vmid, u32 vcpuid)
 {
-	u64 pc, pstate, load_addr;
+	u64 pc, hstatus, sstatus, load_addr;
 
 	pc = get_int_pc(vmid, vcpuid);
 	load_addr = search_load_info(vmid, pc);
@@ -20,47 +21,37 @@ void reset_gp_regs(u32 vmid, u32 vcpuid)
 	else
 	{
 		clear_shadow_gp_regs(vmid, vcpuid);
-		pstate = get_int_pstate(vmid, vcpuid);
-		set_shadow_ctxt(vmid, vcpuid, V_PSTATE, pstate);
+		hstatus = get_int_hstatus(vmid, vcpuid);
+		sstatus = get_int_sstatus(vmid, vcpuid);
+		set_shadow_ctxt(vmid, vcpuid, V_HSTATUS, hstatus);
+		set_shadow_ctxt(vmid, vcpuid, V_SSTATUS, sstatus);
 		set_shadow_ctxt(vmid, vcpuid, V_PC, pc);
 		reset_fp_regs(vmid, vcpuid);
     	}
 }
 
-//TODO: Embed this function in reset_sys_regs
-static inline u64 hs_reset_mpidr(u32 vcpu_id)
+void reset_fp_regs(u32 vmid, int vcpu_id)
 {
-	u64 mpidr;
-	mpidr = (vcpu_id & 0x0f) << MPIDR_LEVEL_SHIFT(0);
-	mpidr |= ((vcpu_id >> 4) & 0xff) << MPIDR_LEVEL_SHIFT(1);
-	mpidr |= ((vcpu_id >> 12) & 0xff) << MPIDR_LEVEL_SHIFT(2);
-	return ((1ULL << 31) | mpidr);
+	struct shadow_vcpu_context *shadow_ctxt = NULL;
+	struct kvm_vcpu *vcpu = vcpu;
+	struct kvm_cpu_context *kvm_cpu_context;
+
+	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	kvm_cpu_context = &vcpu->arch.guest_context;
+	hs_memcpy(&shadow_ctxt->ctxt.fp, &kvm_cpu_context->fp,
+					sizeof(union __riscv_fp_state));
 }
 
 void reset_sys_regs(u32 vmid, u32 vcpuid)
 {
 	u64 val;
-	u32 i = 1U;
-	while (i <= SHADOW_SYS_REGS_SIZE)
+	u32 i = 0U;
+	while (i < SHADOW_SYS_REGS_SIZE)
 	{
-		if (i == MPIDR_EL1)
-		{
-			//TODO: Confirm with LXP
-			//u64 mpidr = (vcpuid % 16U) + ((vcpuid / 16U) % 256U) * 256U +
-			//                      ((vcpuid / 4096U) % 256U) * 65536U;
-			//val = mpidr + 2147483648UL;
-			val = hs_reset_mpidr(vcpuid);
-		}
-		else if (i == ACTLR_EL1)
-		{
-			val = read_sysreg(actlr_el1);
-		}
-		else
-		{
-			//TODO:this will not work, we need to pass vmid and vcpuid
-			val = get_sys_reg_desc_val(i);
-		}
-		set_shadow_ctxt(vmid, vcpuid, i + SYSREGS_START, val);
+		//TODO:this will not work, we need to pass vmid and vcpuid
+		val = get_sys_reg_desc_val(i);
+		set_shadow_ctxt(vmid, vcpuid, i + CSRS_START, val);
 		i += 1U;
 	}
 }
@@ -69,7 +60,7 @@ void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 {
 	u32 i = 0U;
 	u64 dirty = get_shadow_dirty_bit(vmid, vcpuid);
-	while (i < 31U)
+	while (i <= GP_REG_END)
 	{
 		if (dirty & (1U << i))
 		{
@@ -80,32 +71,45 @@ void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 	}
 }
 
+//make sure we only use get_int_ctxt to access general purposes regs
+void clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
+	struct hs_data *hs_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
+	hs_memset(&hs_data->shadow_vcpu_ctxt[offset].ctxt, 0, sizeof(struct kvm_cpu_context));
+}
+
 void prep_wfx(u32 vmid, u32 vcpuid)
 {
+	unsigned long insn = vm_read_insn(vmid, vcpuid);
+	if (insn == -1) // let KVM handle it if failed to read instruction
+		return;
+	set_shadow_skip_len(vmid, vcpuid, INSN_LEN(insn));
 	set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 }
 
 void prep_hvc(u32 vmid, u32 vcpuid)
 {
-	u64 psci_fn;
+	u64 sbi_num, a0;
 
-	psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL) & ~((u32) 0);
-	set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
-	set_int_gpr(vmid, vcpuid, 0U, get_shadow_ctxt(vmid, vcpuid, 0UL));
+	sbi_num = get_shadow_ctxt(vmid, vcpuid, 17U); // a7
+	a0 = get_shadow_ctxt(vmid, vcpuid, 10U);
 
-	if (psci_fn == PSCI_0_2_FN64_CPU_ON)
+	set_int_gpr(vmid, vcpuid, 10U, a0);
+	set_int_gpr(vmid, vcpuid, 11U, get_shadow_ctxt(vmid, vcpuid, 11U));
+	set_int_gpr(vmid, vcpuid, 12U, get_shadow_ctxt(vmid, vcpuid, 12U));
+	set_int_gpr(vmid, vcpuid, 13U, get_shadow_ctxt(vmid, vcpuid, 13U));
+	set_int_gpr(vmid, vcpuid, 14U, get_shadow_ctxt(vmid, vcpuid, 14U));
+	set_int_gpr(vmid, vcpuid, 15U, get_shadow_ctxt(vmid, vcpuid, 15U));
+	set_int_gpr(vmid, vcpuid, 16U, get_shadow_ctxt(vmid, vcpuid, 16U));
+	set_int_gpr(vmid, vcpuid, 17U, sbi_num);
+
+	if (sbi_num == SBI_EXT_0_1_SEND_IPI ||
+	    sbi_num == SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID)
 	{
-		set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
-		set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
-		set_int_gpr(vmid, vcpuid, 3U, get_shadow_ctxt(vmid, vcpuid, 3U));
+		(void)vm_read(vmid, vcpuid, false, a0); // handled by KVM
 	}
-	else if (psci_fn == PSCI_0_2_FN_AFFINITY_INFO || 
-		 psci_fn == PSCI_0_2_FN64_AFFINITY_INFO)
-	{
-		set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
-		set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
-	}
-	else if (psci_fn == PSCI_0_2_FN_SYSTEM_OFF)
+	else if (sbi_num == SBI_EXT_0_1_SHUTDOWN)
 	{
 		set_vm_poweroff(vmid);
 	}
@@ -114,31 +118,26 @@ void prep_hvc(u32 vmid, u32 vcpuid)
 //synchronized
 void prep_abort(u32 vmid, u32 vcpuid)
 {
-	u64 esr, fault_ipa, reg;
+	u64 fault_ipa, reg;
 	u32 Rd;
-	//bool is_write;
+	u64 scause;
+	unsigned long insn;
 
-	esr = get_int_esr(vmid, vcpuid);
-	Rd = (u32)((esr / 65536UL) % 32UL);
-	fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_HS) / 16UL) * 4096UL;
+	insn = vm_read_insn(vmid, vcpuid);
+	if (insn == -1) // let KVM handle it if failed to read instruction
+		return;
+
+	scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
+	Rd = insn_decode_rd(insn, scause == EXC_STORE_GUEST_PAGE_FAULT);
+	fault_ipa = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
 
 	//TODO: sync with verified code to support QEMU 3.0
-	if (fault_ipa < MAX_MMIO_ADDR || fault_ipa >= 0x4000000000)
+	if (fault_ipa < MAX_MMIO_ADDR)
 	{
-		/*if (fault_ipa > 0xc000000 && fault_ipa < 0xe000000) {
-		  u64 flags = get_shadow_ctxt(vmid, vcpuid, V_FLAGS);
-		  flags |= PENDING_FSC_FAULT;
-		  set_shadow_ctxt(vmid, vcpuid, V_FLAGS, flags);
-		  printhex_ul(fault_ipa);
-		  return;
-		  }*/
+		set_shadow_skip_len(vmid, vcpuid, INSN_LEN(insn));
 		set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 
-		//if ((esr / 64UL) % 4UL == 0UL) {
-		//is_write = !!(esr & ESR_ELx_WNR) || !!(esr & ESR_ELx_S1PTW);
-		//if (!is_write) {
-		//MMIO_READ
-		if (((esr & ESR_ELx_WNR) == 0) && ((esr & ESR_ELx_S1PTW) == 0))
+		if (scause != EXC_STORE_GUEST_PAGE_FAULT)
 		{
 			set_shadow_dirty_bit(vmid, vcpuid, 1 << Rd);
 		}
@@ -152,16 +151,37 @@ void prep_abort(u32 vmid, u32 vcpuid)
 
 void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
 {
-	u64 esr, pstate, pc, new_pc;
-	esr = ESR_ELx_EC_UNKNOWN;
-	pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
+	u64 vsstatus, scause, stval, pc, new_pc;
+
+	vsstatus = get_shadow_ctxt(vmid, vcpuid, V_VSSTATUS);
+
+	/* Change Guest SSTATUS.SPP bit */
+	vsstatus &= ~SR_SPP;
+	if (get_shadow_ctxt(vmid, vcpuid, V_SSTATUS) & SR_SPP)
+		vsstatus |= SR_SPP;
+
+	/* Change Guest SSTATUS.SPIE bit */
+	vsstatus &= ~SR_SPIE;
+	if (vsstatus & SR_SIE)
+		vsstatus |= SR_SPIE;
+
+	/* Clear Guest SSTATUS.SIE bit */
+	vsstatus &= ~SR_SIE;
+
+	/* Update Guest SSTATUS */
+	set_shadow_ctxt(vmid, vcpuid, V_VSSTATUS, vsstatus);
+
+	/* Update Guest SCAUSE, STVAL, and SEPC */
+	scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
+	stval = get_shadow_ctxt(vmid, vcpuid, V_STVAL);
 	pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
-	new_pc = get_exception_vector(pstate);
-	set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
+	set_shadow_ctxt(vmid, vcpuid, V_VSEPC, pc);
+	set_shadow_ctxt(vmid, vcpuid, V_VSCAUSE, scause);
+	set_shadow_ctxt(vmid, vcpuid, V_VSTVAL, stval);
+
+	/* Set Guest PC to Guest exception vector */
+	new_pc = get_shadow_ctxt(vmid, vcpuid, V_VSTVEC);
 	set_shadow_ctxt(vmid, vcpuid, V_PC, new_pc);
-	set_shadow_ctxt(vmid, vcpuid, V_PSTATE, PSTATE_FAULT_BITS_64);
-	set_shadow_ctxt(vmid, vcpuid, V_SPSR_0, pstate);
-	set_shadow_ctxt(vmid, vcpuid, V_ESR_EL1, esr);
 }
 
 //TODO: API is a bit different, why is level not 32 bit?

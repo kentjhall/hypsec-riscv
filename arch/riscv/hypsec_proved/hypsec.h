@@ -59,12 +59,8 @@ static void inline v_panic(void) {
 	printhex_ul(csr_read(CSR_SCAUSE));
 }
 
-#define current_hs_thread_info() \
-	((struct hs_thread_info *)riscv_current_is_tp)
-
 void    clear_phys_mem(u64 pfn);
 u32     verify_image(u32 vmid, u32 load_idx, u64 addr);
-u64     get_exception_vector(u64 pstate);
 
 static u64 inline get_shared_kvm(u32 vmid) {
     //return SHARED_KVM_START + vmid * sizeof(struct kvm);
@@ -91,9 +87,10 @@ static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
 extern void reset_fp_regs(u32 vmid, int vcpu_id);
 
 static u64 inline get_vm_fault_addr(u32 vmid, u32 vcpuid) {
-	u64 hpfar;
-	hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_HS);
-	return hpfar;
+	u64 htval, stval;
+	htval = get_shadow_ctxt(vmid, vcpuid, V_HTVAL);
+	stval = get_shadow_ctxt(vmid, vcpuid, V_STVAL);
+	return (htval << 2) | (stval & 0x3);
 }
 
 static void inline mem_load_raw(u64 gfn, u32 reg) {
@@ -416,7 +413,7 @@ static u64 inline get_int_gpr(u32 vmid, u32 vcpuid, u32 index) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
 	struct kvm_vcpu *vcpu;
-	if (index >= 35)
+	if (index > GP_REG_END)
 		__hyp_panic();
 	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
 	vcpu = &shared_data->vcpu_pool[offset];
@@ -432,7 +429,7 @@ static u64 inline get_int_pc(u32 vmid, u32 vcpuid) {
 	return vcpu->arch.guest_context.sepc;
 }
 
-static u64 inline get_int_pstate(u32 vmid, u32 vcpuid) {
+static u64 inline get_int_hstatus(u32 vmid, u32 vcpuid) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
 	struct kvm_vcpu *vcpu;
@@ -441,15 +438,42 @@ static u64 inline get_int_pstate(u32 vmid, u32 vcpuid) {
 	return vcpu->arch.guest_context.hstatus;
 }
 
+static u64 inline get_int_sstatus(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.guest_context.sstatus;
+}
+
 static void inline set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
        struct shared_data *shared_data;
        int offset = VCPU_IDX(vmid, vcpuid);
        struct kvm_vcpu *vcpu;
-       if (index >= 35)
+       if (index > GP_REG_END)
                __hyp_panic();
        shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
        vcpu = &shared_data->vcpu_pool[offset];
        ((unsigned long *)&vcpu->arch.guest_context)[index] = value;
+}
+
+static void inline set_int_unpriv_read_val(u32 vmid, u32 vcpuid, unsigned long value) {
+       struct shared_data *shared_data;
+       int offset = VCPU_IDX(vmid, vcpuid);
+       struct kvm_vcpu *vcpu;
+       shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+       vcpu = &shared_data->vcpu_pool[offset];
+       vcpu->arch.unpriv_read_val = value;
+}
+
+static unsigned long inline get_int_unpriv_read_val(u32 vmid, u32 vcpuid) {
+       struct shared_data *shared_data;
+       int offset = VCPU_IDX(vmid, vcpuid);
+       struct kvm_vcpu *vcpu;
+       shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+       vcpu = &shared_data->vcpu_pool[offset];
+       return vcpu->arch.unpriv_read_val;
 }
 
 void	set_int_pstate(u32 vmid, u32 vcpuid, u64 value);
@@ -471,6 +495,18 @@ static void inline set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 		hs_data->shadow_vcpu_ctxt[offset].dirty |= value;
 	else
 		hs_data->shadow_vcpu_ctxt[offset].dirty = 0;
+}
+
+static int inline get_shadow_skip_len(u32 vmid, u32 vcpuid) {
+    	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
+	int offset = VCPU_IDX(vmid, vcpuid);
+	return hs_data->shadow_vcpu_ctxt[offset].skip_len;
+}
+
+static void inline set_shadow_skip_len(u32 vmid, u32 vcpuid, int value) {
+    	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
+	int offset = VCPU_IDX(vmid, vcpuid);
+	hs_data->shadow_vcpu_ctxt[offset].skip_len = value;
 }
 
 static bool inline get_int_writable(u32 vmid, u32 vcpuid) {
@@ -498,24 +534,6 @@ static u32 inline get_int_new_level(u32 vmid, u32 vcpuid) {
 	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
 	vcpu = &shared_data->vcpu_pool[offset];
 	return vcpu->arch.walk_result.level;
-}
-
-//u32     get_shadow_esr(u32 vmid, u32 vcpuid);
-//u32     get_int_esr(u32 vmid, u32 vcpuid);
-
-static u32 inline get_shadow_esr(u32 vmid, u32 vcpuid) {
-    	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
-	int offset = VCPU_IDX(vmid, vcpuid);
-	return hs_data->shadow_vcpu_ctxt[offset].esr;
-}
-
-static u32 inline get_int_esr(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.guest_trap.htinst;
 }
 
 extern void test_aes(struct hs_data *hs_data);

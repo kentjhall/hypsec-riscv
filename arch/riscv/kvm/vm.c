@@ -20,6 +20,17 @@
 
 int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 {
+#ifdef CONFIG_VERIFIED_KVM
+	int cpu;
+
+	kvm->arch.last_vcpu_ran = alloc_percpu(typeof(*kvm->arch.last_vcpu_ran));
+	if (!kvm->arch.last_vcpu_ran) {
+		return -ENOMEM;
+	}
+
+	for_each_possible_cpu(cpu)
+		*per_cpu_ptr(kvm->arch.last_vcpu_ran, cpu) = -1;
+#else
 	int r;
 
 	r = kvm_riscv_stage2_alloc_pgd(kvm);
@@ -31,6 +42,7 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 		kvm_riscv_stage2_free_pgd(kvm);
 		return r;
 	}
+#endif
 
 	return kvm_riscv_guest_timer_init(kvm);
 }
