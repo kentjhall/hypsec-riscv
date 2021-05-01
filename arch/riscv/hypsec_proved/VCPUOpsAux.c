@@ -8,9 +8,11 @@
 
 void reset_gp_regs(u32 vmid, u32 vcpuid)
 {
-	u64 pc, hstatus, sstatus, load_addr;
+	u64 pc, a0, a1, hstatus, sstatus, load_addr;
 
 	pc = get_int_pc(vmid, vcpuid);
+	a0 = get_int_gpr(vmid, vcpuid, 10);
+	a1 = get_int_gpr(vmid, vcpuid, 11);
 	load_addr = search_load_info(vmid, pc);
 
 	if (load_addr == 0UL)
@@ -26,6 +28,8 @@ void reset_gp_regs(u32 vmid, u32 vcpuid)
 		set_shadow_ctxt(vmid, vcpuid, V_HSTATUS, hstatus);
 		set_shadow_ctxt(vmid, vcpuid, V_SSTATUS, sstatus);
 		set_shadow_ctxt(vmid, vcpuid, V_PC, pc);
+		set_shadow_ctxt(vmid, vcpuid, 10, a0);
+		set_shadow_ctxt(vmid, vcpuid, 11, a1);
 		reset_fp_regs(vmid, vcpuid);
     	}
 }
