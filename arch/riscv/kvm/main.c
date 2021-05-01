@@ -120,7 +120,6 @@ struct kvm* hypsec_arch_alloc_vm(void)
 	struct kvm *kvm;
 	int vmid = hypsec_register_kvm();
 	BUG_ON(vmid <= 0);
-	pr_alert("hypsec_register_kvm returned %d\n", vmid);
 	kvm = hypsec_alloc_vm(vmid);
 	kvm->arch.vmid.vmid = (u32)vmid;
 	return kvm;

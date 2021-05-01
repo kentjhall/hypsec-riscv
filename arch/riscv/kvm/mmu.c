@@ -69,6 +69,7 @@ static inline unsigned long stage2_pte_page_vaddr(pte_t pte)
 	return (unsigned long)pfn_to_virt(pte_val(pte) >> _PAGE_PFN_SHIFT);
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static int stage2_page_size_to_level(unsigned long page_size, u32 *out_level)
 {
 	u32 i;
@@ -83,6 +84,7 @@ static int stage2_page_size_to_level(unsigned long page_size, u32 *out_level)
 
 	return -EINVAL;
 }
+#endif
 
 static int stage2_level_to_page_size(u32 level, unsigned long *out_pgsize)
 {
@@ -118,6 +120,7 @@ static void stage2_cache_flush(struct kvm_mmu_page_cache *pcache)
 		free_page((unsigned long)pcache->objects[--pcache->nobjs]);
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static void *stage2_cache_alloc(struct kvm_mmu_page_cache *pcache)
 {
 	void *p;
@@ -130,6 +133,7 @@ static void *stage2_cache_alloc(struct kvm_mmu_page_cache *pcache)
 
 	return p;
 }
+#endif
 
 static bool stage2_get_leaf_entry(struct kvm *kvm, gpa_t addr,
 				  pte_t **ptepp, u32 *ptep_level)
@@ -185,6 +189,7 @@ static int stage2_set_pte(struct kvm *kvm, u32 level,
 			   struct kvm_mmu_page_cache *pcache,
 			   gpa_t addr, const pte_t *new_pte)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	u32 current_level = stage2_pgd_levels - 1;
 	pte_t *next_ptep = (pte_t *)kvm->arch.pgd;
 	pte_t *ptep = &next_ptep[stage2_pte_index(addr, current_level)];
@@ -215,10 +220,12 @@ static int stage2_set_pte(struct kvm *kvm, u32 level,
 	*ptep = *new_pte;
 	if (pte_val(*ptep) & _PAGE_LEAF)
 		stage2_remote_tlb_flush(kvm, current_level, addr);
+#endif
 
 	return 0;
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static int stage2_map_page(struct kvm *kvm,
 			   struct kvm_mmu_page_cache *pcache,
 			   gpa_t gpa, phys_addr_t hpa,
@@ -263,6 +270,7 @@ static int stage2_map_page(struct kvm *kvm,
 
 	return stage2_set_pte(kvm, level, pcache, gpa, &new_pte);
 }
+#endif
 
 enum stage2_op {
 	STAGE2_OP_NOP = 0,	/* Nothing */
@@ -714,6 +722,20 @@ int kvm_test_age_hva(struct kvm *kvm, unsigned long hva)
 				 kvm_test_age_hva_handler, NULL);
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+static void set_s2_trans_result(struct kvm_vcpu *vcpu, kvm_pfn_t pfn,
+				phys_addr_t output, bool writable, int level)
+{
+	struct s2_trans *walk_result = &vcpu->arch.walk_result;
+	walk_result->pfn = pfn;
+	walk_result->output = output;
+	walk_result->writable = writable;
+	walk_result->readable = true;
+	walk_result->level = level;
+	walk_result->desc = 0;
+}
+#endif
+
 int kvm_riscv_stage2_map(struct kvm_vcpu *vcpu,
 			 struct kvm_memory_slot *memslot,
 			 gpa_t gpa, unsigned long hva, bool is_write)
@@ -790,6 +812,7 @@ int kvm_riscv_stage2_map(struct kvm_vcpu *vcpu,
 	if (mmu_notifier_retry(kvm, mmu_seq))
 		goto out_unlock;
 
+#ifndef CONFIG_VERIFIED_KVM
 	if (writeable) {
 		kvm_set_pfn_dirty(hfn);
 		mark_page_dirty(kvm, gfn);
@@ -799,6 +822,13 @@ int kvm_riscv_stage2_map(struct kvm_vcpu *vcpu,
 		ret = stage2_map_page(kvm, pcache, gpa, hfn << PAGE_SHIFT,
 				      vma_pagesize, true, true);
 	}
+#else
+	if (vma_pagesize != PAGE_SIZE)
+		set_s2_trans_result(vcpu, hfn, hfn << _PAGE_PFN_SHIFT, writeable, 2);
+	else
+		set_s2_trans_result(vcpu, hfn, hfn << _PAGE_PFN_SHIFT, writeable, 3);
+#endif
+
 
 	if (ret)
 		kvm_err("Failed to map in stage2\n");

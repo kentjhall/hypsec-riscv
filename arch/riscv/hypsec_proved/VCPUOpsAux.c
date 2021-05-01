@@ -123,17 +123,18 @@ void prep_abort(u32 vmid, u32 vcpuid)
 	u64 scause;
 	unsigned long insn;
 
-	insn = vm_read_insn(vmid, vcpuid);
-	if (insn == -1) // let KVM handle it if failed to read instruction
-		return;
-
-	scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
-	Rd = insn_decode_rd(insn, scause == EXC_STORE_GUEST_PAGE_FAULT);
-	fault_ipa = (csr_read(CSR_HTVAL) << 2) | (csr_read(CSR_STVAL) & 0x3);
+	fault_ipa = get_vm_fault_addr(vmid, vcpuid);
 
 	//TODO: sync with verified code to support QEMU 3.0
 	if (fault_ipa < MAX_MMIO_ADDR)
 	{
+		insn = vm_read_insn(vmid, vcpuid);
+		if (insn == -1) // let KVM handle it if failed to read instruction
+			return;
+
+		scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
+		Rd = insn_decode_rd(insn, scause == EXC_STORE_GUEST_PAGE_FAULT);
+
 		set_shadow_skip_len(vmid, vcpuid, INSN_LEN(insn));
 		set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 

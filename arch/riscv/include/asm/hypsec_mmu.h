@@ -15,8 +15,7 @@
 
 #define PAGE_GUEST			__pgprot(PTE_S2_GUEST)
 
-#define __hs_va(x)	(void *)(((unsigned long)(x) & \
-					(HS_PAGE_OFFSET - 1)) | HS_PAGE_OFFSET)
+#define __hs_va(x)	__va(x)
 #define	HYPSEC_VMID			0xffffffff
 
 #define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE

@@ -13,19 +13,20 @@ static void __activate_traps(struct kvm_vcpu *vcpu)
 static void __load_guest_stage2(u64 vmid)
 {
 	csr_write(CSR_HGATP, get_pt_hgatp((u32)vmid));
+	__kvm_riscv_hfence_gvma_all();
 }
 
 static inline void __populate_fault_info(struct kvm_vcpu *vcpu, u64 scause,
 		                         struct shadow_vcpu_context *shadow_ctxt)
 {
-	u64 htval = shadow_ctxt->trap.htval, stval = shadow_ctxt->trap.stval;
+	u64 fault_ipa = (shadow_ctxt->trap.htval << 2) | (shadow_ctxt->trap.stval & 0x3);
 
 	/*
 	 * Here we'd like to avoid calling handle_shadow_s2pt_fault
 	 * twice if it's GPA belongs to MMIO region. Since no mapping
 	 * should be built anyway.
 	 */
-	if (!is_mmio_gpa((htval << 2) | (stval & 0x3))) {
+	if (!is_mmio_gpa(fault_ipa)) {
 		hs_memset(&vcpu->arch.walk_result, 0, sizeof(struct s2_trans));
 		shadow_ctxt->flags |= PENDING_FSC_FAULT;
 	}
@@ -132,7 +133,9 @@ static void kvm_riscv_vcpu_host_fp_restore(struct kvm_cpu_context *cntx)
 
 static void __host_hs_restore_state(struct hs_data *hs_data)
 {
-	csr_write(CSR_HGATP, get_pt_hgatp(hs_data->host_hgatp));
+	csr_write(CSR_HGATP, hs_data->host_hgatp);
+	__kvm_riscv_hfence_gvma_all();
+
 	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
 	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
 
@@ -180,9 +183,9 @@ void __kvm_vcpu_run(u32 vmid, int vcpu_id)
 
 	kvm_riscv_vcpu_timer_restore(vcpu);
 
+	prot_ctxt->csr.hvip = vcpu->arch.guest_csr.hvip;
+	prot_ctxt->csr.hie = vcpu->arch.guest_csr.hie;
 	__vm_csr_restore_state_opt(prot_ctxt);	
-	vcpu->arch.guest_csr.hvip = prot_ctxt->csr.hvip;
-	vcpu->arch.guest_csr.hie = prot_ctxt->csr.hie;
 
 	kvm_riscv_vcpu_host_fp_save(&vcpu->arch.host_context);
 	kvm_riscv_vcpu_guest_fp_restore(&prot_ctxt->ctxt, vcpu->arch.isa);
@@ -192,21 +195,26 @@ void __kvm_vcpu_run(u32 vmid, int vcpu_id)
 		__kvm_riscv_switch_to(&switch_ctxt);
 
 		/* And we're baaack! */
-
 		scause = csr_read(CSR_SCAUSE);
+
 	} while (fixup_guest_exit(vcpu, scause, vmid, vcpu_id));
 
 	__vm_csr_save_state_opt(prot_ctxt);
-
-	__host_hs_restore_state(hs_data);
-
-	__csr_restore_state(&host_csr);
+	vcpu->arch.guest_csr.hvip = prot_ctxt->csr.hvip;
+	vcpu->arch.guest_csr.hie = prot_ctxt->csr.hie;
+	vcpu->arch.guest_context.sepc = prot_ctxt->ctxt.sepc;
+	vcpu->arch.guest_context.sstatus = prot_ctxt->ctxt.sstatus;
+	vcpu->arch.guest_context.hstatus = prot_ctxt->ctxt.hstatus;
 
 	kvm_riscv_vcpu_guest_fp_save(&prot_ctxt->ctxt, vcpu->arch.isa);
 	kvm_riscv_vcpu_host_fp_restore(&vcpu->arch.host_context);
 
 	set_shadow_ctxt(vmid, vcpu_id, V_EC, scause);
 	save_shadow_kvm_regs();
+
+	__host_hs_restore_state(hs_data);
+
+	__csr_restore_state(&host_csr);
 
 	set_per_cpu(0, current_hs_thread_info()->cpu);
 	hypsec_set_vcpu_state(vmid, vcpu_id, READY);

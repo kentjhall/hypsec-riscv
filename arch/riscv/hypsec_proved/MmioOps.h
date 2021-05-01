@@ -216,7 +216,7 @@ static inline unsigned long vm_read(u32 vmid, u32 vcpuid,
 }
 
 #define vm_read_insn(vmid, vcpuid) \
-	vm_read(vmid, vcpuid, true, csr_read(CSR_SEPC))
+	vm_read(vmid, vcpuid, true, get_shadow_ctxt(vmid, vcpuid, V_PC))
 
 static inline int insn_decode_rd(unsigned long insn, bool is_write)
 {
@@ -247,6 +247,8 @@ static inline int insn_decode_rd(unsigned long insn, bool is_write)
 			rd = REG_OFFSET(insn, SH_RS2C);
 		} else {
 			// Can't decode
+			print_string("Can't decode instruction:\n");
+			printhex_ul(insn);
 			hyp_panic();
 		}
 	} else

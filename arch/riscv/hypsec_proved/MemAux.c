@@ -37,8 +37,11 @@ void map_page_host(u64 addr)
 	else
 	{
 		/* Time to freak out */
-		print_string("addr:\n");
-		printhex_ul(addr);
+		print_string("faults on host\n");
+		print_string("pfn:\n");
+		printhex_ul(pfn);
+		print_string("owner:\n");
+		printhex_ul(owner);
 		v_panic();
 	}
 	release_lock_s2page();
@@ -47,7 +50,7 @@ void map_page_host(u64 addr)
 /* TODO: I yanked this from AbstractMachine.c */
 void clear_phys_page(unsigned long pfn)
 {
-	u64 addr = (u64)__hs_va(pfn << PAGE_SHIFT);
+	u64 addr = (u64)__va(pfn << PAGE_SHIFT);
 	hs_memset((void *)addr, 0, PAGE_SIZE);
 }
 
@@ -64,7 +67,7 @@ void clear_vm_page(u32 vmid, u64 pfn)
 		set_pfn_count(pfn, 0U);
 		set_pfn_map(pfn, 0UL);
 		clear_phys_page(pfn);
-		__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
+		__flush_dcache_area(__va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	}
 	release_lock_s2page();
 }
@@ -119,14 +122,14 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	}
 	else
 	{
+		print_string("pfn:\n");
+		printhex_ul(pfn);
+		print_string("owner:\n");
+		printhex_ul(owner);
 		v_panic();
 	}
-	/*
-	 * TODO (etm): Calling this crashes the kernel due to a hypsec page fault
-	 *  I think it has something to do with the new linker script since
-	 *  calling other non-hypsec symbols results in page faults as well.
-	 */
-	//__flush_dcache_area(__hs_va(pfn << PAGE_SHIFT), PAGE_SIZE);
+
+	__flush_dcache_area(__va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	release_lock_s2page();
 }
 
@@ -136,8 +139,8 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 
 	paddr = phys_page(pte);	
 	/* protect hypsec text section (read-only) */
-	if (addr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
-	    addr < (unsigned long)__pa_symbol(__hyp_text_end))
+	if (paddr >= (unsigned long)__pa_symbol(__hyp_text_start) &&
+	    paddr < (unsigned long)__pa_symbol(__hyp_text_end))
 		perm = pgprot_val(PAGE_READ);
 	/* We give the VM RWX permission now. */
 	else 
@@ -145,7 +148,7 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 
 	if (level == 2U)
 	{
-		pte = paddr | perm;
+		pte = pte | perm;
 		/*
 		 * TODO(etm): I think on ARM this is setting a huge page.
 		 * 	On RISCV there's nothing special to do.
@@ -155,7 +158,7 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	}
 	else if (level == 3U)
 	{
-		pte = paddr | perm;
+		pte = pte | perm;
 		mmap_s2pt(vmid, addr, 3U, pte);
 	}
 }

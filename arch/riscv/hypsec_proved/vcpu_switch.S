@@ -16,17 +16,17 @@
 	.option norelax
 
 ENTRY(__kvm_riscv_switch_to)
-	/* Load guest shadow context pointer */
+	/* Load Guest Shadow Context Pointer */
 	REG_L	t6, (HYPSEC_SWITCH_CONTEXT_SHADOW_CTXT)(a0)
 
-	/* Load vcpu arch */
+	/* Load Arch */
 	REG_L	t0, (HYPSEC_SWITCH_CONTEXT_ARCH)(a0)
 
-	/* Save Host SSCRATCH and change it to struct hypsec_switch_context pointer */
+	/* Save Host SSCRATCH and Change To Switch Context Pointer */
 	csrrw	t3, CSR_SSCRATCH, a0
 	REG_S	t3, (KVM_ARCH_HOST_SSCRATCH)(t0)
 
-	/* Store vcpu arch in A0 */
+	/* Move Arch to A0 */
 	move	a0, t0
 
 	/* Save Host GPRs (except A0 and T0-T6) */
@@ -74,11 +74,12 @@ ENTRY(__kvm_riscv_switch_to)
 	csrrw	t4, CSR_STVEC, t4
 	REG_S	t4, (KVM_ARCH_HOST_STVEC)(a0)
 
-	/* Restore Guest SEPC */
+	/* Save Host and Restore Guest SEPC */
 	REG_L	t0, (KVM_CPU_CONTEXT_SEPC)(t6)
-	csrw	CSR_SEPC, t0
+	csrrw	t0, CSR_SEPC, t0
+	REG_S	t0, (KVM_ARCH_HOST_SEPC)(a0)
 
-	/* Restore Guest GPRs (except A0 and T6) */
+	/* Restore Guest GPRs */
 	REG_L	ra, (KVM_CPU_CONTEXT_RA)(t6)
 	REG_L	sp, (KVM_CPU_CONTEXT_SP)(t6)
 	REG_L	gp, (KVM_CPU_CONTEXT_GP)(t6)
@@ -88,6 +89,7 @@ ENTRY(__kvm_riscv_switch_to)
 	REG_L	t2, (KVM_CPU_CONTEXT_T2)(t6)
 	REG_L	s0, (KVM_CPU_CONTEXT_S0)(t6)
 	REG_L	s1, (KVM_CPU_CONTEXT_S1)(t6)
+	REG_L	a0, (KVM_CPU_CONTEXT_A0)(t6)
 	REG_L	a1, (KVM_CPU_CONTEXT_A1)(t6)
 	REG_L	a2, (KVM_CPU_CONTEXT_A2)(t6)
 	REG_L	a3, (KVM_CPU_CONTEXT_A3)(t6)
@@ -108,9 +110,6 @@ ENTRY(__kvm_riscv_switch_to)
 	REG_L	t3, (KVM_CPU_CONTEXT_T3)(t6)
 	REG_L	t4, (KVM_CPU_CONTEXT_T4)(t6)
 	REG_L	t5, (KVM_CPU_CONTEXT_T5)(t6)
-
-	/* Restore Guest A0 and T6 */
-	REG_L	a0, (KVM_CPU_CONTEXT_A0)(t6)
 	REG_L	t6, (KVM_CPU_CONTEXT_T6)(t6)
 
 	/* Resume Guest */
@@ -122,10 +121,10 @@ __kvm_switch_return:
 	/* Swap Guest A0 with SSCRATCH */
 	csrrw	a0, CSR_SSCRATCH, a0
 
-	/* Store T6 in switch context scratch */
+	/* Store T6 in Switch Context */
 	REG_S	t6, (HYPSEC_SWITCH_CONTEXT_SCRATCH)(a0)
 
-	/* Load guest shadow context pointer */
+	/* Load Guest Shadow Context Pointer */
 	REG_L	t6, (HYPSEC_SWITCH_CONTEXT_SHADOW_CTXT)(a0)
 
 	/* Save Guest GPRs (except A0 and T6) */
@@ -163,11 +162,12 @@ __kvm_switch_return:
 	REG_L	t0, (HYPSEC_SWITCH_CONTEXT_SCRATCH)(a0)
 	REG_S	t0, (KVM_CPU_CONTEXT_T6)(t6)
 
-	/* Load vcpu arch */
+	/* Load Arch */
 	REG_L	a0, (HYPSEC_SWITCH_CONTEXT_ARCH)(a0)
 
-	/* Save Guest SEPC */
-	csrr	t0, CSR_SEPC
+	/* Save Guest SEPC and Restore Host SEPC */
+	REG_L	t0, (KVM_ARCH_HOST_SEPC)(a0)
+	csrrw	t0, CSR_SEPC, t0
 	REG_S	t0, (KVM_CPU_CONTEXT_SEPC)(t6)
 
 	/* Restore Host STVEC */
