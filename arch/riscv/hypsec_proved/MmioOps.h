@@ -215,8 +215,18 @@ static inline unsigned long vm_read(u32 vmid, u32 vcpuid,
 	return val;
 }
 
-#define vm_read_insn(vmid, vcpuid) \
-	vm_read(vmid, vcpuid, true, get_shadow_ctxt(vmid, vcpuid, V_PC))
+static inline unsigned long vm_read_insn(u32 vmid, u32 vcpuid)
+{
+	unsigned long pc, htinst;
+
+	pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
+	htinst = get_shadow_ctxt(vmid, vcpuid, V_HTINST);
+
+	if (htinst & 0x1)
+		return htinst | INSN_16BIT_MASK;
+
+	return vm_read(vmid, vcpuid, true, pc);
+}
 
 static inline int insn_decode_rd(unsigned long insn, bool is_write)
 {
@@ -251,8 +261,21 @@ static inline int insn_decode_rd(unsigned long insn, bool is_write)
 			printhex_ul(insn);
 			hyp_panic();
 		}
-	} else
+	}
+	else {
+#ifdef CONFIG_64BIT
+		if ((insn & INSN_MASK_C_LD) == INSN_MATCH_C_LD) {
+			insn = RVC_RS2S(insn) << SH_RD;
+#else
+		if (0) {
+			;
+#endif
+		} else if ((insn & INSN_MASK_C_LW) == INSN_MATCH_C_LW) {
+			insn = RVC_RS2S(insn) << SH_RD;
+		}
+
 		rd = REG_OFFSET(insn, SH_RD);
+	}
 
 	return rd / sizeof(unsigned long);
 }

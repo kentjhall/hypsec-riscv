@@ -200,8 +200,8 @@ void __kvm_vcpu_run(u32 vmid, int vcpu_id)
 	} while (fixup_guest_exit(vcpu, scause, vmid, vcpu_id));
 
 	__vm_csr_save_state_opt(prot_ctxt);
-	vcpu->arch.guest_csr.hvip = prot_ctxt->csr.hvip;
-	vcpu->arch.guest_csr.hie = prot_ctxt->csr.hie;
+	vcpu->arch.hvip = prot_ctxt->csr.hvip;
+	vcpu->arch.hie = prot_ctxt->csr.hie;
 	vcpu->arch.guest_context.sepc = prot_ctxt->ctxt.sepc;
 	vcpu->arch.guest_context.sstatus = prot_ctxt->ctxt.sstatus;
 	vcpu->arch.guest_context.hstatus = prot_ctxt->ctxt.hstatus;

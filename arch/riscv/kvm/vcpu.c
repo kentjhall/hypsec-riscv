@@ -696,7 +696,8 @@ void kvm_riscv_vcpu_sync_interrupts(struct kvm_vcpu *vcpu)
 	hvip = csr_read(CSR_HVIP);
 	csr->hie = csr_read(CSR_HIE);
 #else
-	hvip = csr->hvip;
+	hvip = v->hvip;
+	csr->hie = v->hie;
 #endif
 
 	/* Sync-up HVIP.VSSIP bit changes does by Guest */
