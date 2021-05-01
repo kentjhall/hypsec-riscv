@@ -203,14 +203,14 @@ static inline unsigned long vm_read(u32 vmid, u32 vcpuid,
 	old_hstatus = csr_swap(CSR_HSTATUS, get_int_hstatus(vmid, vcpuid));
 	old_stvec = csr_swap(CSR_STVEC, (ulong)&__kvm_riscv_unpriv_trap);
 
-	val = unpriv_read(read_insn, vaddr, &vcpu->arch.unpriv_read_trap);
+	val = unpriv_read(read_insn, vaddr, &vcpu->arch.utrap);
 
 	csr_write(CSR_STVEC, old_stvec);
 	csr_write(CSR_HSTATUS, old_hstatus);
 
 	set_int_unpriv_read_val(vmid, vcpuid, val);
 
-	if (vcpu->arch.unpriv_read_trap.scause)
+	if (vcpu->arch.utrap.scause)
 		return -1;
 	return val;
 }

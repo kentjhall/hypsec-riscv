@@ -173,7 +173,7 @@ static int virtual_inst_fault(struct kvm_vcpu *vcpu, struct kvm_run *run,
 							  &utrap);
 #else
 			insn = vcpu->arch.unpriv_read_val;
-			utrap = vcpu->arch.unpriv_read_trap;
+			utrap = vcpu->arch.utrap;
 #endif
 			if (utrap.scause) {
 				utrap.sepc = ct->sepc;
@@ -220,7 +220,7 @@ static int emulate_load(struct kvm_vcpu *vcpu, struct kvm_run *run,
 						  &utrap);
 #else
 		insn = vcpu->arch.unpriv_read_val;
-		utrap = vcpu->arch.unpriv_read_trap;
+		utrap = vcpu->arch.utrap;
 #endif
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
@@ -338,7 +338,7 @@ static int emulate_store(struct kvm_vcpu *vcpu, struct kvm_run *run,
 						  &utrap);
 #else
 		insn = vcpu->arch.unpriv_read_val;
-		utrap = vcpu->arch.unpriv_read_trap;
+		utrap = vcpu->arch.utrap;
 #endif
 		if (utrap.scause) {
 			/* Redirect trap if we failed to read instruction */
@@ -581,6 +581,7 @@ unsigned long kvm_riscv_vcpu_unpriv_read(struct kvm_vcpu *vcpu,
 void kvm_riscv_vcpu_trap_redirect(struct kvm_vcpu *vcpu,
 				  struct kvm_cpu_trap *trap)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	unsigned long vsstatus = csr_read(CSR_VSSTATUS);
 
 	/* Change Guest SSTATUS.SPP bit */
@@ -606,6 +607,9 @@ void kvm_riscv_vcpu_trap_redirect(struct kvm_vcpu *vcpu,
 
 	/* Set Guest PC to Guest exception vector */
 	vcpu->arch.guest_context.sepc = csr_read(CSR_VSTVEC);
+#else
+	vcpu->arch.utrap = *trap;
+#endif
 }
 
 /**

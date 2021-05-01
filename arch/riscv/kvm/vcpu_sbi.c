@@ -115,7 +115,7 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 #else
 		if (cp->a0) {
 			hmask = vcpu->arch.unpriv_read_val;
-			utrap = vcpu->arch.unpriv_read_trap;
+			utrap = vcpu->arch.utrap;
 		}
 #endif
 		else
@@ -146,7 +146,7 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 #else
 		if (cp->a0) {
 			hmask = vcpu->arch.unpriv_read_val;
-			utrap = vcpu->arch.unpriv_read_trap;
+			utrap = vcpu->arch.utrap;
 		}
 #endif
 		else

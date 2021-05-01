@@ -37,7 +37,7 @@ void reset_gp_regs(u32 vmid, u32 vcpuid)
 void reset_fp_regs(u32 vmid, int vcpu_id)
 {
 	struct shadow_vcpu_context *shadow_ctxt = NULL;
-	struct kvm_vcpu *vcpu = vcpu;
+	struct kvm_vcpu *vcpu;
 	struct kvm_cpu_context *kvm_cpu_context;
 
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
@@ -85,11 +85,29 @@ void clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
 
 void prep_wfx(u32 vmid, u32 vcpuid)
 {
-	unsigned long insn = vm_read_insn(vmid, vcpuid);
-	if (insn == -1) // let KVM handle it if failed to read instruction
-		return;
+	unsigned long insn;
+
+	insn = get_shadow_ctxt(vmid, vcpuid, V_STVAL);
+	if (unlikely(INSN_IS_16BIT(insn))) {
+		if (insn == 0) {
+			insn = vm_read_insn(vmid, vcpuid);
+			if (insn == -1)
+				goto illegal;
+		}
+		if (INSN_IS_16BIT(insn))
+			goto illegal;
+	}
+	if ((insn & INSN_OPCODE_MASK) >> INSN_OPCODE_SHIFT != INSN_OPCODE_SYSTEM)
+		goto illegal;
+	if (!((insn & INSN_MASK_WFI) == INSN_MATCH_WFI))
+		goto illegal;
+
 	set_shadow_skip_len(vmid, vcpuid, INSN_LEN(insn));
 	set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
+	return;
+
+illegal:
+	set_shadow_dirty_bit(vmid, vcpuid, PENDING_EXCEPT_INJECT_FLAG);
 }
 
 void prep_hvc(u32 vmid, u32 vcpuid)
@@ -122,9 +140,10 @@ void prep_hvc(u32 vmid, u32 vcpuid)
 	else if (sbi_num == SBI_EXT_0_1_SEND_IPI ||
 	         sbi_num == SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID)
 	{
-		(void)vm_read(vmid, vcpuid, false, a0); // handled by KVM
-		if (vcpu->arch.unpriv_read_trap.scause)
+		if (vm_read(vmid, vcpuid, false, a0) == -1) {
 			skip_insn = false;
+			set_shadow_dirty_bit(vmid, vcpuid, PENDING_EXCEPT_INJECT_FLAG);
+		}
 	}
 	else if (sbi_num == SBI_EXT_0_1_SHUTDOWN)
 	{
@@ -152,8 +171,10 @@ void prep_abort(u32 vmid, u32 vcpuid)
 	if (fault_ipa < MAX_MMIO_ADDR)
 	{
 		insn = vm_read_insn(vmid, vcpuid);
-		if (insn == -1) // let KVM handle it if failed to read instruction
+		if (insn == -1) {
+			set_shadow_dirty_bit(vmid, vcpuid, PENDING_EXCEPT_INJECT_FLAG);
 			return;
+		}
 
 		scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
 		Rd = insn_decode_rd(insn, scause == EXC_STORE_GUEST_PAGE_FAULT);
@@ -176,7 +197,9 @@ void prep_abort(u32 vmid, u32 vcpuid)
 void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
 {
 	u64 vsstatus, scause, stval, pc, new_pc;
+	struct kvm_vcpu *vcpu;
 
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpuid);
 	vsstatus = get_shadow_ctxt(vmid, vcpuid, V_VSSTATUS);
 
 	/* Change Guest SSTATUS.SPP bit */
@@ -196,9 +219,9 @@ void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
 	set_shadow_ctxt(vmid, vcpuid, V_VSSTATUS, vsstatus);
 
 	/* Update Guest SCAUSE, STVAL, and SEPC */
-	scause = get_shadow_ctxt(vmid, vcpuid, V_EC);
-	stval = get_shadow_ctxt(vmid, vcpuid, V_STVAL);
-	pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
+	scause = vcpu->arch.utrap.scause;
+	stval = vcpu->arch.utrap.stval;
+	pc = vcpu->arch.utrap.sepc;
 	set_shadow_ctxt(vmid, vcpuid, V_VSEPC, pc);
 	set_shadow_ctxt(vmid, vcpuid, V_VSCAUSE, scause);
 	set_shadow_ctxt(vmid, vcpuid, V_VSTVAL, stval);

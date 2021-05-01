@@ -218,7 +218,7 @@ struct kvm_vcpu_arch {
 #ifdef CONFIG_VERIFIED_KVM
 	struct kvm_cpu_trap guest_trap;
 	unsigned long unpriv_read_val;
-	struct kvm_cpu_trap unpriv_read_trap;
+	struct kvm_cpu_trap utrap;
 #endif
 	
 
