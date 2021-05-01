@@ -95,7 +95,10 @@ void prep_wfx(u32 vmid, u32 vcpuid)
 void prep_hvc(u32 vmid, u32 vcpuid)
 {
 	u64 sbi_num, a0;
+	struct kvm_vcpu *vcpu;
+	bool skip_insn = true;
 
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpuid);
 	sbi_num = get_shadow_ctxt(vmid, vcpuid, 17U); // a7
 	a0 = get_shadow_ctxt(vmid, vcpuid, 10U);
 
@@ -108,14 +111,30 @@ void prep_hvc(u32 vmid, u32 vcpuid)
 	set_int_gpr(vmid, vcpuid, 16U, get_shadow_ctxt(vmid, vcpuid, 16U));
 	set_int_gpr(vmid, vcpuid, 17U, sbi_num);
 
-	if (sbi_num == SBI_EXT_0_1_SEND_IPI ||
-	    sbi_num == SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID)
+	set_shadow_dirty_bit(vmid, vcpuid, 1 << 10);
+	set_shadow_dirty_bit(vmid, vcpuid, 1 << 11);
+
+	if (sbi_num == SBI_EXT_0_1_CONSOLE_GETCHAR ||
+	    sbi_num == SBI_EXT_0_1_CONSOLE_PUTCHAR)
+	{
+		skip_insn = false;
+	}
+	else if (sbi_num == SBI_EXT_0_1_SEND_IPI ||
+	         sbi_num == SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID)
 	{
 		(void)vm_read(vmid, vcpuid, false, a0); // handled by KVM
+		if (vcpu->arch.unpriv_read_trap.scause)
+			skip_insn = false;
 	}
 	else if (sbi_num == SBI_EXT_0_1_SHUTDOWN)
 	{
 		set_vm_poweroff(vmid);
+		skip_insn = false;
+	}
+
+	if (skip_insn) {
+		set_shadow_skip_len(vmid, vcpuid, 4);
+		set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 	}
 }
 
