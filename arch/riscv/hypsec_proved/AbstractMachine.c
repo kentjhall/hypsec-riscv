@@ -33,12 +33,6 @@ void int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
-void clear_phys_page(unsigned long pfn)
-{
-	u64 addr = (u64)__hs_va(pfn << PAGE_SHIFT);
-	hs_memset((void *)addr, 0, PAGE_SIZE);
-}
-
 u32 verify_image(u32 vmid, u32 load_idx, u64 addr) {
     uint8_t* signature;
     uint8_t* public_key;
@@ -48,11 +42,11 @@ u32 verify_image(u32 vmid, u32 load_idx, u64 addr) {
     size = get_vm_load_size(vmid, load_idx);
     public_key = get_vm_public_key(vmid);
     signature = get_vm_load_signature(vmid, load_idx);
-    print_string("\rverifying image:\n");
+    print_string("verifying image:\n");
     //printhex_ul(size);
     result = Hacl_Ed25519_verify(public_key, size, (uint8_t *)addr, signature);
     //result = Hacl_Ed25519_verify(key, size, (char *)addr, signature1);
-    print_string("\r[result]\n");
+    print_string("[result]\n");
     printhex_ul(result);
     return 1;
 }
@@ -116,67 +110,6 @@ void decrypt_buf(u32 vmid, u64 in_buf, u64 out_buf, uint32_t len)
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
-
-//MMIOOps
-u32 get_iommu_cfg_vmid(u32 cbndx, u32 num)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u32 index;
-	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
-	return hs_data->iommu_cfg[index].vmid;
-}
-
-void set_iommu_cfg_vmid(u32 cbndx, u32 num, u32 vmid)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u32 index;
-	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
-	hs_data->iommu_cfg[index].vmid = vmid;
-}
-
-u64 get_iommu_cfg_hw_ttbr(u32 cbndx, u32 num)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u32 index;
-	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
-	return hs_data->iommu_cfg[index].hw_ttbr;
-}
-
-void set_iommu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u32 index;
-	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
-	hs_data->iommu_cfg[index].hw_ttbr = hw_ttbr;
-}
-
-//MMIOAux
-u32 get_iommu_num(void)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->hs_iommu_num;
-}	
-
-u32 get_iommu_num_context_banks(u32 num)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommus[num].num_context_banks;
-}
-
-u32 get_iommu_pgshift(u32 num)
-{
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	return hs_data->iommus[num].pgshift;
-}
-
-void iommu_pt_clear(u32 cbndx, u32 num) {
-	struct hs_data *hs_data = kern_hyp_va(kvm_ksym_ref(hs_data_start));
-	u32 index;
-	u64 va;
-	index = IOMMU_NUM_CTXT_BANKS * num + cbndx;
-	va = (u64)__hs_va(hs_data->iommu_cfg[index].hw_ttbr); 
-	hs_memset((void *)va, 0, PAGE_SIZE * 2);
-};
 
 //Management
 

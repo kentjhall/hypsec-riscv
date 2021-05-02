@@ -59,6 +59,7 @@ typedef const char *Prims_string;
 typedef __m128i FStar_UInt128_uint128;
 #elif !defined(KRML_VERIFIED_UINT128) && !defined(_MSC_VER) && \
       (defined(__x86_64__) || defined(__x86_64) || defined(__aarch64__) || \
+      defined(__riscv) || \
       (defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)))
 typedef unsigned __int128 FStar_UInt128_uint128;
 #elif !defined(KRML_VERIFIED_UINT128) && defined(_MSC_VER) && defined(__clang__)

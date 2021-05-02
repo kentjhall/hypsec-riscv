@@ -198,11 +198,7 @@ void verify_and_load_images(u32 vmid)
 			remap_addr = get_vm_remap_addr(vmid, load_idx);
 			mapped = get_vm_mapped_pages(vmid, load_idx);
 			unmap_and_load_vm_image(vmid, load_addr, remap_addr, mapped);
-#if 0 // TEMPORARY
 			valid = verify_image(vmid, load_idx, remap_addr);
-#else
-			valid = 1;
-#endif
 			if (valid == 0U)
 			{
 				v_panic();

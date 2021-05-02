@@ -1,7 +1,7 @@
 #
 # Makefile for host Kernel running with stage 2 translation
 #
-#obj-y += AbstractMachine.o
+obj-y += AbstractMachine.o
 obj-y += MemBlock.o
 obj-y += PageIndex.o
 obj-y += PageMgmt.o
@@ -21,7 +21,12 @@ obj-y += VCPUOps.o
 obj-y += hs.o
 ##obj-y += mmap.o
 obj-y += csr-sr.o
-#obj-y += hacl-20/
+# obj-y += hacl-20/hacl.o
+obj-y += hacl-20/Hacl_Hash.o
+obj-y += hacl-20/Hacl_Curve25519_51.o
+obj-y += hacl-20/Hacl_Ed25519.o
+obj-y += hacl-20/Hacl_AES.o
+obj-y += hacl-20/Hacl_Host.o
 obj-y += PlicOps.o
 obj-y += PlicAux.o
 obj-y += PlicCore.o
