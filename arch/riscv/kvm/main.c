@@ -37,7 +37,7 @@ static inline void enter_vs_mode(void)
 
 	csr_write(CSR_VSSTATUS, csr_read(CSR_SSTATUS));
 	csr_write(CSR_HIE, csr_read(CSR_SIE) << VSIP_TO_HVIP_SHIFT);
-	csr_write(CSR_HVIP, csr_read(CSR_SIP) << VSIP_TO_HVIP_SHIFT);
+	csr_write(CSR_HVIP, 0UL);
 	csr_write(CSR_VSTVEC, csr_read(CSR_STVEC));
 	csr_write(CSR_VSSCRATCH, csr_read(CSR_SSCRATCH));
 	csr_write(CSR_VSEPC, csr_read(CSR_SEPC));

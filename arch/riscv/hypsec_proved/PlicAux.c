@@ -19,12 +19,10 @@ u32 is_plic_range(u64 addr)
 
 void handle_host_mmio(void)
 {
-	u64 base_addr;
 	u64 fault_ipa;
 	u32 is_write, len;
 	unsigned long insn = host_read_insn();
 
-	base_addr = get_plic_hyp_base();
 	fault_ipa = host_get_fault_ipa(); 
 	len = host_dabt_get_as(insn);
 	is_write = host_dabt_is_write();
