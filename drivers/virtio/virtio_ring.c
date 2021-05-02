@@ -16,7 +16,9 @@
 #include <kvm/pvops.h>
 #endif
 
+#ifdef CONFIG_KVM_RISCV_PVOPS
 static void inline virtqueue_touch(void *addr, size_t len);
+#endif
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
@@ -1732,6 +1734,7 @@ err_ring:
 	return NULL;
 }
 
+#ifdef CONFIG_KVM_RISCV_PVOPS
 static void inline virtqueue_touch(void *addr, size_t len)
 {
 	char *ptr = addr;
@@ -1742,6 +1745,7 @@ static void inline virtqueue_touch(void *addr, size_t len)
 		pgnum--;
 	} while (pgnum > 0);
 }
+#endif
 
 
 /*
