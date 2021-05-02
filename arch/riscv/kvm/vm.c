@@ -103,8 +103,11 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		case KVM_RISCV_SET_BOOT_INFO: {
 			struct kvm_boot_info info;
 			struct page *page[1];
-			int npages, id;
-			unsigned long start, end, virt_addr;
+			long npages;
+			int id;
+			unsigned long start, end, virt_addr, curr_pfn;
+			unsigned long prev_pfn = 0;
+			int is_aligned;
 
 			if (copy_from_user(&info, argp, sizeof(info)))
 				return -EFAULT;
@@ -114,10 +117,27 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 			id = hs_set_boot_info(kvm->arch.vmid.vmid, info.addr, info.datasize, 0);
 			for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
-
 				npages = get_user_pages(virt_addr, 1, FOLL_WRITE, page, NULL);
+				curr_pfn = page_to_pfn(page[0]);
+				is_aligned = IS_ALIGNED(curr_pfn << PAGE_SHIFT, 1<<PMD_SHIFT);
+				/*
+				 * We're mapping 2MB huge pages in unmap_and_load_vm_image (corevisor),
+				 * so the physmem backing the kernel image must be either 2MB aligned
+				 * or contiguous with a 2MB aligned page in the kernel image.
+				 */
+				if (unlikely(prev_pfn == 0 && !is_aligned)) {
+					pr_err("set_boot_info: first phys page is not 2MB aligned 0x%lx\n",
+							curr_pfn << PAGE_SHIFT);
+					return -EINVAL;
+				} else if (unlikely(curr_pfn - prev_pfn != 1 && !is_aligned)) {
+					pr_err("set_boot_info: non-contiguous unaligned phys page: 0x%lx, 0x%lx\n",
+							prev_pfn, curr_pfn);
+					return -EINVAL;
+				}
+				prev_pfn = curr_pfn;
+
 				if (npages == 1)
-					hs_remap_vm_image(kvm->arch.vmid.vmid, page_to_pfn(page[0]), id);
+					hs_remap_vm_image(kvm->arch.vmid.vmid, curr_pfn, id);
 				else
 					return -EFAULT;
 			}
