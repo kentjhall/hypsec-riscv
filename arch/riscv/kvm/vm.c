@@ -117,7 +117,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 			id = hs_set_boot_info(kvm->arch.vmid.vmid, info.addr, info.datasize, 0);
 			for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
-				npages = get_user_pages(virt_addr, 1, FOLL_WRITE, page, NULL);
+				npages = get_user_pages_fast(virt_addr, 1, FOLL_WRITE, page);
 				curr_pfn = page_to_pfn(page[0]);
 				is_aligned = IS_ALIGNED(curr_pfn << PAGE_SHIFT, 1<<PMD_SHIFT);
 				/*
@@ -163,7 +163,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 				return -ENOMEM;
 			}
 
-			npages = get_user_pages_fast_only(kue.uva, 1, FOLL_WRITE, page);
+			npages = get_user_pages_fast(kue.uva, 1, FOLL_WRITE, page);
 			if (npages == 1) {
 				hs_encrypt_buf(kvm->arch.vmid.vmid,
 					(u64) (page_to_pfn(page[0]) << PAGE_SHIFT),
@@ -186,7 +186,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 			struct page *page[1];
 			int npages;
 
-			npages = get_user_pages_fast_only(arg, 1, FOLL_WRITE, page);
+			npages = get_user_pages_fast(arg, 1, FOLL_WRITE, page);
 			if (npages == 1)
 				hs_decrypt_buf(kvm->arch.vmid.vmid,
 					(void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
@@ -201,7 +201,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 			struct page *page[1];
 			int npages;
 
-			npages = get_user_pages_fast_only(arg, 1, FOLL_WRITE, page);
+			npages = get_user_pages_fast(arg, 1, FOLL_WRITE, page);
 			if (npages == 1) {
 				return 0;
 			} else {
