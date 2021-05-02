@@ -16,7 +16,7 @@
 u32 handle_pvops(u32 vmid, u32 vcpuid)
 {
 	u32 ret;
-	u64 sbi_num, call_num, addr, size;
+	u64 sbi_num, call_num, addr, size, pc;
 
 	sbi_num = get_shadow_ctxt(vmid, vcpuid, 17U); // a7
 	call_num  = get_shadow_ctxt(vmid, vcpuid, 10U); // a0
@@ -33,10 +33,14 @@ u32 handle_pvops(u32 vmid, u32 vcpuid)
 		else if (call_num == KVM_SET_DESC_PFN)
 		{
 			grant_stage2_sg_gpa(vmid, addr, size);
+			pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
+			set_shadow_ctxt(vmid, vcpuid, V_PC, pc + 4);
 		}
 		else if (call_num == KVM_UNSET_DESC_PFN)
 		{
 			revoke_stage2_sg_gpa(vmid, addr, size);
+			pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
+			set_shadow_ctxt(vmid, vcpuid, V_PC, pc + 4);
 		}
 		else
 		{
