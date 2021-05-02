@@ -168,7 +168,7 @@ void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 			if (mapped < page_count)
 			{
 				mmap_s2pt(COREVISOR, target, 3UL,
-					(pfn << _PAGE_PFN_SHIFT) + pgprot_val(PAGE_WRITE));
+					(pfn << _PAGE_PFN_SHIFT) + pgprot_val(PAGE_KERNEL));
 				set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
 			}
 		}
@@ -241,7 +241,6 @@ void map_io(u32 vmid, u64 gpa, u64 pa)
 	return check(inc_exe);
 }
 
-#if 0
 void __save_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 {
 	encrypt_gp_regs(vmid, vcpu_id);
@@ -323,4 +322,3 @@ void __hs_decrypt_buf(u32 vmid, void *buf, u32 len)
 
 	release_lock_vm(vmid);
 }
-#endif

@@ -104,36 +104,23 @@ static void handle_host_hvc(struct kvm_cpu_context *hr)
 		case HVC_PHYS_ADDR_IOREMAP:
 			hs_kvm_phys_addr_ioremap((u32)arg1, arg2, arg3, arg4);
 			break;
+		case HVC_ENCRYPT_BUF:
+			__hs_encrypt_buf((u32)arg1, arg2, arg3);
+			break;
+		case HVC_DECRYPT_BUF:
+			__hs_decrypt_buf((u32)arg1, (void*)arg2, (uint32_t)arg3);
+			break;
+		case HVC_SAVE_CRYPT_VCPU:
+			__save_encrypted_vcpu((u32)arg1, (u32)arg2);
+			break;
+		case HVC_LOAD_CRYPT_VCPU:
+			__load_encrypted_vcpu((u32)arg1, (u32)arg2);
+			break;
 		default:
 			print_string("\rUnsupported hvc:\n");
 			printhex_ul(callno);
 			__hyp_panic();
 	}
-#if 0 // TEMPORARY
-	else if (callno == HVC_ENCRYPT_BUF)
-	{
-		__hs_encrypt_buf((u32)arg1, arg2, arg3);
-	}
-	else if (callno == HVC_DECRYPT_BUF)
-	{
-		//TODO: FIXME
-		__hs_decrypt_buf((u32)arg1, (void*)arg2, (uint32_t)arg3);
-	}
-	else if (callno == HVC_SAVE_CRYPT_VCPU)
-	{
-		__save_encrypted_vcpu((u32)arg1, (u32)arg2);
-	}
-	else if (callno == HVC_LOAD_CRYPT_VCPU)
-	{
-		__load_encrypted_vcpu((u32)arg1, (u32)arg2);
-	}
-	else
-	{
-		print_string("\rno support hvc:\n");
-		printhex_ul(callno);
-		v_panic();
-	}
-#endif
 }
 
 void handle_host_hs_trap(struct kvm_cpu_context *hregs)
