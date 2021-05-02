@@ -53,6 +53,8 @@ void hvc_enable_s2_trans(void)
 	__kvm_riscv_hfence_gvma_all();
 
 	release_lock_core();
+
+	csr_write(CSR_SIE, -1UL); // re-enable interrupts after VS transition
 }
 
 static void handle_host_hvc(struct kvm_cpu_context *hr)

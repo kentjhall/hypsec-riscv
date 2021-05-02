@@ -45,13 +45,13 @@ static inline void enter_vs_mode(void)
 	csr_write(CSR_VSTVAL, csr_read(CSR_STVAL));
 	csr_write(CSR_VSATP, csr_read(CSR_SATP));
 
+	csr_write(CSR_SIE, 0); // disable interrupts for transition
 	csr_write(CSR_HGATP, HGATP_MODE_OFF);
 	csr_write(CSR_HEDELEG, HEDELEG_HOST_FLAGS);
 	csr_write(CSR_HIDELEG, HIDELEG_HOST_FLAGS);
 	csr_write(CSR_HCOUNTEREN, -1UL);
 	csr_set(CSR_HSTATUS, HSTATUS_SPV);
 	csr_set(CSR_SSTATUS, SR_SPP | SR_SPIE | SR_FS_INITIAL);
-	csr_write(CSR_SIE, -1UL);
 	csr_write(CSR_SSCRATCH, &hs_data->thread_info[smp_processor_id()]);
 	csr_write(CSR_STVEC, __kvm_riscv_host_trap);
 	csr_write(CSR_SATP, PFN_DOWN(__pa(hyp_pg_dir)) | SATP_MODE);
