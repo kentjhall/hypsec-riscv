@@ -92,8 +92,6 @@ void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 		}
 		else
 		{
-			//pfn is mapped to a hostvisor IOMMU table
-			print_string("\rassign pfn used by host iommu device\n");
 			v_panic();
 		}
 	} 

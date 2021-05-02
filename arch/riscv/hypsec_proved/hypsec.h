@@ -541,13 +541,6 @@ void set_vm_public_key(u32 vmid);
 uint8_t* get_vm_load_signature(u32 vmid, u32 load_idx);
 void set_vm_load_signature(u32 vmid, u32 load_idx);
 
-//for IOMMU
-#define IOMMU_POOL_START 65536UL
-#define IOMMU_PGD_START 131072UL
-#define IOMMU_PMD_START 196608UL
-#define IOMMU_POOL_END  IOMMU_PAGES_SIZE
-
-#define IOMMU_PMD_BASE	(PAGE_SIZE * 256)
 static void inline acquire_lock_plic(void) {
 	struct hs_data *hs_data = kern_hyp_va((void*)&hs_data_start);
 	stage2_spin_lock(&hs_data->plic_lock);
