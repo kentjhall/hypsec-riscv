@@ -128,6 +128,10 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		}
 		for_each_set_bit(i, &hmask, BITS_PER_LONG) {
 			rvcpu = kvm_get_vcpu_by_id(vcpu->kvm, i);
+#ifdef CONFIG_VERIFIED_KVM
+			if (!rvcpu)
+				continue;
+#endif
 			kvm_riscv_vcpu_set_interrupt(rvcpu, IRQ_VS_SOFT);
 		}
 		break;
@@ -160,6 +164,10 @@ int kvm_riscv_vcpu_sbi_ecall(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		cpumask_clear(&cm);
 		for_each_set_bit(i, &hmask, BITS_PER_LONG) {
 			rvcpu = kvm_get_vcpu_by_id(vcpu->kvm, i);
+#ifdef CONFIG_VERIFIED_KVM
+			if (!rvcpu)
+				continue;
+#endif
 			if (rvcpu->cpu < 0)
 				continue;
 			cpumask_set_cpu(rvcpu->cpu, &cm);

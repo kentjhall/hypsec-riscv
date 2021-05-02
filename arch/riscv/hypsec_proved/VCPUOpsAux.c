@@ -140,9 +140,11 @@ void prep_hvc(u32 vmid, u32 vcpuid)
 	else if (sbi_num == SBI_EXT_0_1_SEND_IPI ||
 	         sbi_num == SBI_EXT_0_1_REMOTE_SFENCE_VMA_ASID)
 	{
-		if (vm_read(vmid, vcpuid, false, a0) == -1) {
-			skip_insn = false;
-			set_shadow_dirty_bit(vmid, vcpuid, PENDING_EXCEPT_INJECT_FLAG);
+		if (a0) {
+			if (vm_read(vmid, vcpuid, false, a0) == -1) {
+				skip_insn = false;
+				set_shadow_dirty_bit(vmid, vcpuid, PENDING_EXCEPT_INJECT_FLAG);
+			}
 		}
 	}
 	else if (sbi_num == SBI_EXT_0_1_SHUTDOWN)
