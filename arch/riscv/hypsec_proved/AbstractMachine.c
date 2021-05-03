@@ -149,26 +149,12 @@ void encrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_cpu_context gp_local;
-	int i;
-	uint64_t *p;
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	hs_memcpy(&gp_local, &shadow_ctxt->ctxt, sizeof(struct kvm_cpu_context));
 	encrypt_kvm_cpu_context(vmid, &gp_local);
 	//gp_local.regs.pstate = shadow_ctxt->regs[V_PSTATE];
 	//gp_local.regs.pstate = shadow_ctxt->gp_regs.regs.pstate;
 	hs_memcpy(&vcpu->arch.guest_context, &gp_local, sizeof(struct kvm_cpu_context));
-	/* for (i = 0; i < 31; i++) */
-	/* 	printhex_ul(shadow_ctxt->gp_regs.regs.regs[i]); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.sp); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.pc); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.pstate); */
-	/* printhex_ul(shadow_ctxt->gp_regs.sp_el1); */
-	/* printhex_ul(shadow_ctxt->gp_regs.elr_el1); */
-	/* for (i = 0; i < 5; i++) */
-	/* 	printhex_ul(shadow_ctxt->gp_regs.spsr[i]); */
-	/* p = (uint64_t *)&vcpu->arch.ctxt.gp_regs.fp_regs; */
-	/* for (i = 0; i < 66; i++) */
-	/* 	printhex_ul(*p++); */
 }
 
 void decrypt_gp_regs(u32 vmid, u32 vcpu_id)
@@ -176,27 +162,12 @@ void decrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_cpu_context gp_local;
-	int i;
-	uint64_t *p;
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	hs_memcpy(&gp_local, &vcpu->arch.guest_context, sizeof(struct kvm_cpu_context));
 	decrypt_kvm_cpu_context(vmid, &gp_local);
 	//gp_local.regs.pstate = vcpu->arch.ctxt.gp_regs.regs.pstate;
 	hs_memcpy(&shadow_ctxt->ctxt, &gp_local, sizeof(struct kvm_cpu_context));
 	hs_memset(&vcpu->arch.guest_context, 0, sizeof(struct kvm_cpu_context));
-	/* for (i = 0; i < 31; i++) */
-	/* 	printhex_ul(shadow_ctxt->gp_regs.regs.regs[i]); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.sp); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.pc); */
-	/* printhex_ul(shadow_ctxt->gp_regs.regs.pstate); */
-	/* printhex_ul(shadow_ctxt->gp_regs.sp_el1); */
-	/* printhex_ul(shadow_ctxt->gp_regs.elr_el1); */
-	/* for (i = 0; i < 5; i++) */
-	/* 	printhex_ul(shadow_ctxt->gp_regs.spsr[i]); */
-
-	/* p = (uint64_t *)&shadow_ctxt->gp_regs.fp_regs; */
-	/* for (i = 0; i < 66; i++) */
-	/* 	printhex_ul(*p++); */
 }
 
 void encrypt_sys_regs(u32 vmid, u32 vcpu_id)
