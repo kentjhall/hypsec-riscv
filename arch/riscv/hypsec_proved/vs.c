@@ -182,9 +182,7 @@ void init_hs_data_page(void)
 	hs_data->core_start = __pa_symbol(stage2_pgs_start);
 	hs_data->core_end = __pa_symbol(hs_data_end);
 
-#if 0 // TEMPORARY
 	init_hacl_hash(hs_data);
-#endif
 	//test_aes(hs_data);
 
 	memcpy(hs_data->key, key, 16);
