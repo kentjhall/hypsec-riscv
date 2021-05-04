@@ -149,8 +149,8 @@ void encrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_cpu_context gp_local;
-	int i;
-	uint64_t *p;
+	/* int i; */
+	/* uint64_t *p; */
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	hs_memcpy(&gp_local, &shadow_ctxt->ctxt, sizeof(struct kvm_cpu_context));
 	encrypt_kvm_cpu_context(vmid, &gp_local);
@@ -176,8 +176,8 @@ void decrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_cpu_context gp_local;
-	int i;
-	uint64_t *p;
+	/* int i; */
+	/* uint64_t *p; */
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	hs_memcpy(&gp_local, &vcpu->arch.guest_context, sizeof(struct kvm_cpu_context));
 	decrypt_kvm_cpu_context(vmid, &gp_local);
