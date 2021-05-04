@@ -577,7 +577,6 @@ static void create_hyp_mappings(unsigned long start, unsigned long end, pgprot_t
 
 void setup_vm_hyp(void)
 {
-        /* struct memblock_region *reg; */
 	struct pt_alloc_ops old_pt_ops = pt_ops;
 	phys_addr_t start, end;
 	u64 i;
