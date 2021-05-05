@@ -31,31 +31,6 @@ u64 walk_pgd(u32 vmid, u64 hgatp, u64 addr, u32 alloc)
 	return check64(ret);
 }
 
-#if 0
-/* No PUD used with RISCV Sv39x4 paging so we fold PUD into PGD */
-u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc)
-{
-	u64 pgd_pa, ret, pud_idx, pud, pud_pa;
-
-	ret = 0UL;
-
-	if (pgd != 0UL)
-	{
-		pgd_pa = phys_page(pgd);
-		pud_idx = pud_idx(addr);
-		pud = pt_load(vmid, pgd_pa | (pud_idx * 8UL));
-		if (pud == 0UL && alloc == 1U)
-		{
-			pud_pa = alloc_s2pt_pud(vmid);
-			pud = pud_pa | pgprot_val(PAGE_TABLE);
-			pt_store(vmid, pgd_pa | (pud_idx * 8UL), pud);
-		}
-		ret = pud;
-	}
-	return check64(ret);
-}
-#endif
-
 u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc)
 {
 	u64 pud_pa, ret, pmd_idx, pmd, pmd_pa;

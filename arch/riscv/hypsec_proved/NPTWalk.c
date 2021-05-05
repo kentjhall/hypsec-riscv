@@ -10,17 +10,6 @@ u32 get_npt_level(u32 vmid, u64 addr)
 
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 0U);
-#if 0
-	/* No PUD w/ Sv39x4 paging */
-	if (vmid == COREVISOR)
-	{
-		pud = walk_pud(vmid, pgd, addr, 0U);
-	}
-	else
-	{
-		pud = pgd;
-	}
-#endif
 	pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
@@ -57,16 +46,6 @@ u64 walk_npt(u32 vmid, u64 addr)
 
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 0U);
-#if 0
-	if (vmid == COREVISOR)
-	{
-		pud = walk_pud(vmid, pgd, addr, 0U);
-	}
-	else
-	{
-		pud = pgd;
-	}
-#endif
 	pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
@@ -90,16 +69,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	hgatp = get_pt_hgatp(vmid);
 	pgd = walk_pgd(vmid, hgatp, addr, 1U);
 	pud = pgd;
-#if 0
-	if (vmid == COREVISOR)
-	{
-		pud = walk_pud(vmid, pgd, addr, 1U);
-	}
-	else
-	{
-		pud = pgd;
-	}
-#endif
+
 	if (level == 2U)
 	{
 		pmd = walk_pmd(vmid, pud, addr, 0U);

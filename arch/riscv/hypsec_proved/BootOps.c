@@ -28,7 +28,6 @@ u64 search_load_info(u32 vmid, u64 addr)
 	return ret;
 } 
 
-#if 0
 void set_vcpu_active(u32 vmid, u32 vcpuid)
 {
 	u32 vm_state, vcpu_state;
@@ -63,7 +62,6 @@ void set_vcpu_inactive(u32 vmid, u32 vcpuid)
 	}
 	release_lock_vm(vmid);
 }
-#endif
 
 void register_vcpu(u32 vmid, u32 vcpuid)
 {
